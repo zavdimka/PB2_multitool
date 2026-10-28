@@ -1,0 +1,23 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        mkdir -p /run/multitool
+        mkdir -p /sys/kernel/config
+        mount -t configfs none /sys/kernel/config 2>/dev/null || true
+        mkdir -p /sys/kernel/config/iio/triggers/hrtimer/multitool-scope 2>/dev/null || true
+        start-stop-daemon -S -b -m -p /run/multitool/multitoold.pid \
+            -x /usr/sbin/multitoold
+        ;;
+    stop)
+        start-stop-daemon -K -p /run/multitool/multitoold.pid
+        ;;
+    restart)
+        "$0" stop
+        "$0" start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}" >&2
+        exit 1
+        ;;
+esac

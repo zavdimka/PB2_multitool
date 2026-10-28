@@ -1,0 +1,10 @@
+/build/cache/
+/build/tmp*/
+/build/deploy-ti/
+/downloads/
+/sstate-cache/
+/sources/
+/build/bitbake-cookerdaemon.log
+/build/conf/conf-notes.txt
+/build/conf/conf-summary.txt
+/build/conf/templateconf.cfg

@@ -1,0 +1,670 @@
+diff --git a/src/jtag/drivers/Makefile.am b/src/jtag/drivers/Makefile.am
+index 6410f3754..02d92113a 100644
+--- a/src/jtag/drivers/Makefile.am
++++ b/src/jtag/drivers/Makefile.am
+@@ -140,6 +140,7 @@ DRIVERFILES += %D%/buspirate.c
+ endif
+ if REMOTE_BITBANG
+ DRIVERFILES += %D%/remote_bitbang.c
++DRIVERFILES += %D%/pb2_pru.c
+ endif
+ if HLADAPTER_STLINK
+ DRIVERFILES += %D%/stlink_usb.c
+diff --git a/src/jtag/drivers/pb2_pru.c b/src/jtag/drivers/pb2_pru.c
+new file mode 100644
+index 000000000..7d0ffc12b
+--- /dev/null
++++ b/src/jtag/drivers/pb2_pru.c
+@@ -0,0 +1,632 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include <errno.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/socket.h>
++#include <sys/un.h>
++#include <unistd.h>
++
++#include <helper/command.h>
++#include <helper/log.h>
++#include <jtag/interface.h>
++#include <jtag/swd.h>
++#include "bitbang.h"
++
++#define MT_PROTOCOL_MAGIC 0x4d543031u
++#define MT_PROTOCOL_VERSION 3u
++#define MT_JTAG_STREAM_MAX_OPS 400u
++#define MT_JTAG_SAMPLE_BYTES ((MT_JTAG_STREAM_MAX_OPS + 7u) / 8u)
++#define MT_SWD_MAX_TRANSFERS 32u
++#define MT_SWD_SEQUENCE_MAX_BITS 256u
++#define MT_SWD_SEQUENCE_BYTES ((MT_SWD_SEQUENCE_MAX_BITS + 7u) / 8u)
++
++#define MT_CAP_JTAG_STREAM (1u << 0)
++#define MT_CAP_SWD_TRANSFER (1u << 1)
++#define MT_CAP_ADAPTER_SPEED (1u << 3)
++
++#define MT_JTAG_OP_TDI (1u << 0)
++#define MT_JTAG_OP_TMS (1u << 1)
++#define MT_JTAG_OP_TCK (1u << 2)
++#define MT_JTAG_OP_SAMPLE (1u << 3)
++#define MT_SWD_RESULT_PARITY_ERROR (1u << 0)
++
++enum mt_command {
++	MT_CMD_HELLO = 1,
++	MT_CMD_STOP = 3,
++	MT_CMD_JTAG_STREAM = 0x201,
++	MT_CMD_ADAPTER_SPEED = 0x202,
++	MT_CMD_PROGRAMMER_RESET = 0x203,
++	MT_CMD_SWD_SEQUENCE = 0x210,
++	MT_CMD_SWD_TRANSFER = 0x211,
++};
++
++struct mt_header {
++	uint32_t magic;
++	uint16_t version;
++	uint16_t command;
++	uint32_t sequence;
++	uint32_t payload_size;
++};
++
++struct mt_hello {
++	uint32_t engine;
++	uint32_t capabilities;
++	uint32_t max_payload;
++	uint32_t clock_hz;
++};
++
++struct mt_reply {
++	uint32_t status;
++	uint32_t detail;
++};
++
++struct mt_adapter_speed {
++	uint32_t delay_cycles;
++};
++
++struct mt_programmer_reset {
++	uint8_t srst;
++	uint8_t trst;
++	uint16_t reserved;
++};
++
++struct mt_jtag_stream {
++	uint16_t count;
++	uint16_t sample_count;
++	uint8_t ops[MT_JTAG_STREAM_MAX_OPS];
++};
++
++struct mt_jtag_stream_result {
++	uint16_t count;
++	uint16_t sample_count;
++	uint8_t samples[MT_JTAG_SAMPLE_BYTES];
++};
++
++struct mt_swd_sequence {
++	uint16_t bit_count;
++	uint16_t reserved;
++	uint8_t bits[MT_SWD_SEQUENCE_BYTES];
++};
++
++struct mt_swd_transfer {
++	uint8_t command;
++	uint8_t reserved;
++	uint16_t idle_cycles;
++	uint32_t data;
++};
++
++struct mt_swd_batch {
++	uint16_t count;
++	uint16_t final_idle_cycles;
++	struct mt_swd_transfer transfers[MT_SWD_MAX_TRANSFERS];
++};
++
++struct mt_swd_result {
++	uint32_t data;
++	uint8_t ack;
++	uint8_t flags;
++	uint16_t reserved;
++};
++
++struct mt_swd_batch_result {
++	uint16_t count;
++	uint16_t completed;
++	struct mt_swd_result results[MT_SWD_MAX_TRANSFERS];
++};
++
++struct mt_message {
++	struct mt_header header;
++	union {
++		struct mt_hello hello;
++		struct mt_reply reply;
++		struct mt_adapter_speed adapter_speed;
++		struct mt_programmer_reset programmer_reset;
++		struct mt_jtag_stream jtag_stream;
++		struct mt_jtag_stream_result jtag_stream_result;
++		struct mt_swd_sequence swd_sequence;
++		struct mt_swd_batch swd_batch;
++		struct mt_swd_batch_result swd_batch_result;
++	} payload;
++};
++
++struct pending_swd {
++	uint8_t command;
++	uint32_t *destination;
++	uint32_t data;
++	uint32_t idle_cycles;
++};
++
++static char pb2_socket_path[108] = "/run/multitool/openocd.sock";
++static int pb2_fd = -1;
++static uint32_t pb2_sequence;
++static int pb2_speed_khz = 1000;
++
++static uint8_t jtag_stream[MT_JTAG_STREAM_MAX_OPS];
++static unsigned int jtag_stream_count;
++static unsigned int jtag_stream_samples;
++static uint8_t jtag_sample_queue[512];
++static unsigned int jtag_sample_read;
++static unsigned int jtag_sample_count;
++static uint8_t jtag_current_state;
++
++static struct pending_swd swd_queue[MT_SWD_MAX_TRANSFERS];
++static unsigned int swd_queue_count;
++static int swd_queued_result = ERROR_OK;
++
++static int pb2_write_full(const void *buffer, size_t length)
++{
++	const uint8_t *position = buffer;
++	size_t done = 0;
++	while (done < length) {
++		ssize_t result = send(pb2_fd, position + done, length - done, MSG_NOSIGNAL);
++		if (result < 0) {
++			if (errno == EINTR)
++				continue;
++			LOG_ERROR("pb2_pru send failed: %s", strerror(errno));
++			return ERROR_FAIL;
++		}
++		done += (size_t)result;
++	}
++	return ERROR_OK;
++}
++
++static int pb2_read_full(void *buffer, size_t length)
++{
++	uint8_t *position = buffer;
++	size_t done = 0;
++	while (done < length) {
++		ssize_t result = recv(pb2_fd, position + done, length - done, 0);
++		if (result == 0) {
++			LOG_ERROR("pb2_pru service disconnected");
++			return ERROR_FAIL;
++		}
++		if (result < 0) {
++			if (errno == EINTR)
++				continue;
++			LOG_ERROR("pb2_pru receive failed: %s", strerror(errno));
++			return ERROR_FAIL;
++		}
++		done += (size_t)result;
++	}
++	return ERROR_OK;
++}
++
++static void pb2_init_message(struct mt_message *message, uint16_t command,
++			     uint32_t payload_size)
++{
++	memset(message, 0, sizeof(*message));
++	message->header.magic = MT_PROTOCOL_MAGIC;
++	message->header.version = MT_PROTOCOL_VERSION;
++	message->header.command = command;
++	message->header.sequence = ++pb2_sequence;
++	message->header.payload_size = payload_size;
++}
++
++static int pb2_exchange(struct mt_message *request, struct mt_message *reply)
++{
++	size_t request_size = sizeof(request->header) + request->header.payload_size;
++	if (pb2_write_full(request, request_size) != ERROR_OK ||
++	    pb2_read_full(&reply->header, sizeof(reply->header)) != ERROR_OK)
++		return ERROR_FAIL;
++	if (reply->header.magic != MT_PROTOCOL_MAGIC ||
++	    reply->header.version != MT_PROTOCOL_VERSION ||
++	    reply->header.command != request->header.command ||
++	    reply->header.sequence != request->header.sequence ||
++	    reply->header.payload_size > sizeof(reply->payload)) {
++		LOG_ERROR("pb2_pru protocol mismatch");
++		return ERROR_FAIL;
++	}
++	if (pb2_read_full(&reply->payload, reply->header.payload_size) != ERROR_OK)
++		return ERROR_FAIL;
++	return ERROR_OK;
++}
++
++static int pb2_simple_command(uint16_t command, const void *payload, size_t size)
++{
++	struct mt_message request;
++	struct mt_message reply;
++	pb2_init_message(&request, command, (uint32_t)size);
++	if (size)
++		memcpy(&request.payload, payload, size);
++	if (pb2_exchange(&request, &reply) != ERROR_OK)
++		return ERROR_FAIL;
++	if (reply.header.payload_size != sizeof(reply.payload.reply) ||
++	    reply.payload.reply.status != 0u) {
++		LOG_ERROR("pb2_pru command 0x%04x failed, status=%" PRIu32,
++			  command, reply.payload.reply.status);
++		return ERROR_FAIL;
++	}
++	return ERROR_OK;
++}
++
++static int pb2_jtag_flush(void)
++{
++	struct mt_message request;
++	struct mt_message reply;
++	unsigned int i;
++
++	if (!jtag_stream_count)
++		return ERROR_OK;
++	pb2_init_message(&request, MT_CMD_JTAG_STREAM,
++			 4u + jtag_stream_count);
++	request.payload.jtag_stream.count = (uint16_t)jtag_stream_count;
++	request.payload.jtag_stream.sample_count = (uint16_t)jtag_stream_samples;
++	memcpy(request.payload.jtag_stream.ops, jtag_stream, jtag_stream_count);
++	if (pb2_exchange(&request, &reply) != ERROR_OK)
++		return ERROR_FAIL;
++	if (reply.header.payload_size < 4u ||
++	    reply.payload.jtag_stream_result.count != jtag_stream_count ||
++	    reply.payload.jtag_stream_result.sample_count != jtag_stream_samples ||
++	    jtag_sample_count + jtag_stream_samples > ARRAY_SIZE(jtag_sample_queue)) {
++		LOG_ERROR("pb2_pru invalid JTAG stream response");
++		return ERROR_FAIL;
++	}
++	for (i = 0; i < jtag_stream_samples; ++i)
++		jtag_sample_queue[jtag_sample_count++] =
++			(reply.payload.jtag_stream_result.samples[i >> 3] >>
++			 (i & 7u)) & 1u;
++	jtag_stream_count = 0;
++	jtag_stream_samples = 0;
++	return ERROR_OK;
++}
++
++static int pb2_jtag_write(int tck, int tms, int tdi)
++{
++	uint8_t state = (tdi ? MT_JTAG_OP_TDI : 0u) |
++			(tms ? MT_JTAG_OP_TMS : 0u) |
++			(tck ? MT_JTAG_OP_TCK : 0u);
++	if (jtag_stream_count == MT_JTAG_STREAM_MAX_OPS &&
++	    pb2_jtag_flush() != ERROR_OK)
++		return ERROR_FAIL;
++	jtag_current_state = state;
++	jtag_stream[jtag_stream_count++] = state;
++	return ERROR_OK;
++}
++
++static int pb2_jtag_sample(void)
++{
++	if (!jtag_stream_count) {
++		if (pb2_jtag_write(jtag_current_state & MT_JTAG_OP_TCK,
++				   jtag_current_state & MT_JTAG_OP_TMS,
++				   jtag_current_state & MT_JTAG_OP_TDI) != ERROR_OK)
++			return ERROR_FAIL;
++	}
++	jtag_stream[jtag_stream_count - 1u] |= MT_JTAG_OP_SAMPLE;
++	jtag_stream_samples++;
++	return ERROR_OK;
++}
++
++static bb_value_t pb2_jtag_read_sample(void)
++{
++	if (jtag_sample_read == jtag_sample_count) {
++		jtag_sample_read = 0;
++		jtag_sample_count = 0;
++		if (pb2_jtag_flush() != ERROR_OK)
++			return BB_ERROR;
++	}
++	if (jtag_sample_read == jtag_sample_count)
++		return BB_ERROR;
++	return jtag_sample_queue[jtag_sample_read++] ? BB_HIGH : BB_LOW;
++}
++
++static struct bitbang_interface pb2_bitbang = {
++	.buf_size = 255,
++	.sample = pb2_jtag_sample,
++	.read_sample = pb2_jtag_read_sample,
++	.write = pb2_jtag_write,
++};
++
++static int pb2_jtag_execute_queue(void)
++{
++	int result = bitbang_execute_queue();
++	if (result != ERROR_OK)
++		return result;
++	return pb2_jtag_flush();
++}
++
++static struct jtag_interface pb2_jtag_ops = {
++	.execute_queue = pb2_jtag_execute_queue,
++};
++
++static int pb2_reset(int trst, int srst)
++{
++	struct mt_programmer_reset reset = {
++		.srst = srst != 0,
++		.trst = trst != 0,
++	};
++	if (pb2_jtag_flush() != ERROR_OK)
++		return ERROR_FAIL;
++	return pb2_simple_command(MT_CMD_PROGRAMMER_RESET, &reset, sizeof(reset));
++}
++
++static int pb2_speed(int speed)
++{
++	struct mt_adapter_speed setting;
++	if (speed <= 0)
++		return ERROR_FAIL;
++	pb2_speed_khz = speed;
++	setting.delay_cycles = 100000u / (uint32_t)speed;
++	if (!setting.delay_cycles)
++		setting.delay_cycles = 1u;
++	return pb2_simple_command(MT_CMD_ADAPTER_SPEED, &setting, sizeof(setting));
++}
++
++static int pb2_khz(int khz, int *speed)
++{
++	if (khz <= 0)
++		return ERROR_FAIL;
++	*speed = khz;
++	return ERROR_OK;
++}
++
++static int pb2_speed_div(int speed, int *khz)
++{
++	if (speed <= 0)
++		return ERROR_FAIL;
++	*khz = speed;
++	return ERROR_OK;
++}
++
++static int pb2_send_swd_sequence(const uint8_t *bits, unsigned int bit_count)
++{
++	struct mt_message request;
++	struct mt_message reply;
++	size_t bytes = DIV_ROUND_UP(bit_count, 8u);
++	if (bit_count > MT_SWD_SEQUENCE_MAX_BITS)
++		return ERROR_FAIL;
++	pb2_init_message(&request, MT_CMD_SWD_SEQUENCE, 4u + bytes);
++	request.payload.swd_sequence.bit_count = (uint16_t)bit_count;
++	memcpy(request.payload.swd_sequence.bits, bits, bytes);
++	if (pb2_exchange(&request, &reply) != ERROR_OK ||
++	    reply.header.payload_size != sizeof(reply.payload.reply) ||
++	    reply.payload.reply.status != 0u)
++		return ERROR_FAIL;
++	return ERROR_OK;
++}
++
++static int pb2_swd_switch_seq(enum swd_special_seq sequence)
++{
++	switch (sequence) {
++	case LINE_RESET:
++		return pb2_send_swd_sequence(swd_seq_line_reset, swd_seq_line_reset_len);
++	case JTAG_TO_SWD:
++		return pb2_send_swd_sequence(swd_seq_jtag_to_swd, swd_seq_jtag_to_swd_len);
++	case SWD_TO_JTAG:
++		return pb2_send_swd_sequence(swd_seq_swd_to_jtag, swd_seq_swd_to_jtag_len);
++	case SWD_TO_DORMANT:
++		return pb2_send_swd_sequence(swd_seq_swd_to_dormant, swd_seq_swd_to_dormant_len);
++	case DORMANT_TO_SWD:
++		return pb2_send_swd_sequence(swd_seq_dormant_to_swd, swd_seq_dormant_to_swd_len);
++	case JTAG_TO_DORMANT:
++		return pb2_send_swd_sequence(swd_seq_jtag_to_dormant, swd_seq_jtag_to_dormant_len);
++	case DORMANT_TO_JTAG:
++		return pb2_send_swd_sequence(swd_seq_dormant_to_jtag, swd_seq_dormant_to_jtag_len);
++	default:
++		return ERROR_FAIL;
++	}
++}
++
++static int pb2_swd_run_queue_internal(void)
++{
++	struct mt_message request;
++	struct mt_message reply;
++	unsigned int i;
++	int result = ERROR_OK;
++
++	if (!swd_queue_count)
++		return ERROR_OK;
++	pb2_init_message(&request, MT_CMD_SWD_TRANSFER,
++			 4u + swd_queue_count * sizeof(struct mt_swd_transfer));
++	request.payload.swd_batch.count = (uint16_t)swd_queue_count;
++	request.payload.swd_batch.final_idle_cycles = 8u;
++	for (i = 0; i < swd_queue_count; ++i) {
++		request.payload.swd_batch.transfers[i].command = swd_queue[i].command;
++		request.payload.swd_batch.transfers[i].idle_cycles =
++			(uint16_t)(swd_queue[i].idle_cycles > UINT16_MAX ?
++				   UINT16_MAX : swd_queue[i].idle_cycles);
++		request.payload.swd_batch.transfers[i].data = swd_queue[i].data;
++	}
++	if (pb2_exchange(&request, &reply) != ERROR_OK) {
++		result = ERROR_FAIL;
++		goto done;
++	}
++	if (reply.header.payload_size < 4u ||
++	    reply.payload.swd_batch_result.count != swd_queue_count ||
++	    reply.payload.swd_batch_result.completed > swd_queue_count) {
++		result = ERROR_FAIL;
++		goto done;
++	}
++	for (i = 0; i < reply.payload.swd_batch_result.completed; ++i) {
++		struct mt_swd_result *wire = &reply.payload.swd_batch_result.results[i];
++		bool check_ack = swd_cmd_returns_ack(swd_queue[i].command);
++		if (check_ack && wire->ack != SWD_ACK_OK) {
++			result = swd_ack_to_error_code(wire->ack);
++			break;
++		}
++		if ((swd_queue[i].command & SWD_CMD_RNW) &&
++		    (wire->flags & MT_SWD_RESULT_PARITY_ERROR)) {
++			LOG_ERROR("pb2_pru SWD read parity mismatch");
++			result = ERROR_SWD_FAIL;
++			break;
++		}
++		if ((swd_queue[i].command & SWD_CMD_RNW) &&
++		    swd_queue[i].destination)
++			*swd_queue[i].destination = wire->data;
++	}
++	if (result == ERROR_OK &&
++	    reply.payload.swd_batch_result.completed != swd_queue_count)
++		result = ERROR_FAIL;
++
++done:
++	swd_queue_count = 0;
++	return result;
++}
++
++static void pb2_swd_queue_command(uint8_t command, uint32_t *destination,
++				  uint32_t data, uint32_t idle_cycles)
++{
++	if (swd_queue_count == MT_SWD_MAX_TRANSFERS) {
++		swd_queued_result = pb2_swd_run_queue_internal();
++		if (swd_queued_result != ERROR_OK)
++			return;
++	}
++	if (swd_queued_result != ERROR_OK)
++		return;
++	swd_queue[swd_queue_count++] = (struct pending_swd) {
++		.command = command,
++		.destination = destination,
++		.data = data,
++		.idle_cycles = idle_cycles,
++	};
++}
++
++static void pb2_swd_read_reg(uint8_t command, uint32_t *value,
++			     uint32_t idle_cycles)
++{
++	pb2_swd_queue_command(command, value, 0u, idle_cycles);
++}
++
++static void pb2_swd_write_reg(uint8_t command, uint32_t value,
++			      uint32_t idle_cycles)
++{
++	pb2_swd_queue_command(command, NULL, value, idle_cycles);
++}
++
++static int pb2_swd_run(void)
++{
++	int result;
++	if (swd_queued_result == ERROR_OK)
++		swd_queued_result = pb2_swd_run_queue_internal();
++	result = swd_queued_result;
++	swd_queued_result = ERROR_OK;
++	return result;
++}
++
++static int pb2_swd_init(void)
++{
++	swd_queue_count = 0;
++	swd_queued_result = ERROR_OK;
++	return ERROR_OK;
++}
++
++static const struct swd_driver pb2_swd_ops = {
++	.init = pb2_swd_init,
++	.switch_seq = pb2_swd_switch_seq,
++	.read_reg = pb2_swd_read_reg,
++	.write_reg = pb2_swd_write_reg,
++	.run = pb2_swd_run,
++};
++
++COMMAND_HANDLER(pb2_handle_socket_command)
++{
++	if (CMD_ARGC != 1)
++		return ERROR_COMMAND_SYNTAX_ERROR;
++	if (strlen(CMD_ARGV[0]) >= sizeof(pb2_socket_path))
++		return ERROR_COMMAND_ARGUMENT_INVALID;
++	strcpy(pb2_socket_path, CMD_ARGV[0]);
++	return ERROR_OK;
++}
++
++static const struct command_registration pb2_subcommands[] = {
++	{
++		.name = "socket",
++		.handler = pb2_handle_socket_command,
++		.mode = COMMAND_CONFIG,
++		.help = "set multitoold Unix socket path",
++		.usage = "path",
++	},
++	COMMAND_REGISTRATION_DONE
++};
++
++static const struct command_registration pb2_commands[] = {
++	{
++		.name = "pb2_pru",
++		.mode = COMMAND_ANY,
++		.help = "PB2 PRU JTAG/SWD adapter",
++		.chain = pb2_subcommands,
++		.usage = "",
++	},
++	COMMAND_REGISTRATION_DONE
++};
++
++static int pb2_init(void)
++{
++	struct sockaddr_un address;
++	struct mt_message request;
++	struct mt_message reply;
++
++	pb2_fd = socket(AF_UNIX, SOCK_STREAM, 0);
++	if (pb2_fd < 0) {
++		LOG_ERROR("pb2_pru socket: %s", strerror(errno));
++		return ERROR_FAIL;
++	}
++	memset(&address, 0, sizeof(address));
++	address.sun_family = AF_UNIX;
++	if (strlen(pb2_socket_path) >= sizeof(address.sun_path)) {
++		LOG_ERROR("pb2_pru socket path is too long");
++		goto error;
++	}
++	strncpy(address.sun_path, pb2_socket_path, sizeof(address.sun_path) - 1u);
++	if (connect(pb2_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
++		LOG_ERROR("pb2_pru connect %s: %s", pb2_socket_path, strerror(errno));
++		goto error;
++	}
++	pb2_init_message(&request, MT_CMD_HELLO, 0u);
++	if (pb2_exchange(&request, &reply) != ERROR_OK ||
++	    reply.header.payload_size != sizeof(reply.payload.hello) ||
++	    (reply.payload.hello.capabilities &
++	     (MT_CAP_JTAG_STREAM | MT_CAP_SWD_TRANSFER | MT_CAP_ADAPTER_SPEED)) !=
++	    (MT_CAP_JTAG_STREAM | MT_CAP_SWD_TRANSFER | MT_CAP_ADAPTER_SPEED)) {
++		LOG_ERROR("pb2_pru firmware lacks required capabilities");
++		goto error;
++	}
++	jtag_stream_count = 0;
++	jtag_stream_samples = 0;
++	jtag_sample_read = 0;
++	jtag_sample_count = 0;
++	jtag_current_state = 0;
++	bitbang_interface = &pb2_bitbang;
++	if (pb2_speed(pb2_speed_khz) != ERROR_OK)
++		goto error;
++	LOG_INFO("PB2 PRU adapter connected through %s", pb2_socket_path);
++	return ERROR_OK;
++
++error:
++	close(pb2_fd);
++	pb2_fd = -1;
++	return ERROR_FAIL;
++}
++
++static int pb2_quit(void)
++{
++	if (pb2_fd >= 0) {
++		struct mt_message request;
++		struct mt_message reply;
++		pb2_init_message(&request, MT_CMD_STOP, 0u);
++		(void)pb2_exchange(&request, &reply);
++		close(pb2_fd);
++		pb2_fd = -1;
++	}
++	return ERROR_OK;
++}
++
++static const char * const pb2_transports[] = { "jtag", "swd", NULL };
++
++struct adapter_driver pb2_pru_adapter_driver = {
++	.name = "pb2_pru",
++	.transports = pb2_transports,
++	.commands = pb2_commands,
++	.init = pb2_init,
++	.quit = pb2_quit,
++	.reset = pb2_reset,
++	.speed = pb2_speed,
++	.khz = pb2_khz,
++	.speed_div = pb2_speed_div,
++	.jtag_ops = &pb2_jtag_ops,
++	.swd_ops = &pb2_swd_ops,
++};
+diff --git a/src/jtag/interfaces.c b/src/jtag/interfaces.c
+index 12848be03..ff2dbdfd4 100644
+--- a/src/jtag/interfaces.c
++++ b/src/jtag/interfaces.c
+@@ -99,6 +99,7 @@ extern struct adapter_driver buspirate_adapter_driver;
+ #endif
+ #if BUILD_REMOTE_BITBANG == 1
+ extern struct adapter_driver remote_bitbang_adapter_driver;
++extern struct adapter_driver pb2_pru_adapter_driver;
+ #endif
+ #if BUILD_HLADAPTER == 1
+ extern struct adapter_driver hl_adapter_driver;
+@@ -216,6 +217,7 @@ struct adapter_driver *adapter_drivers[] = {
+ #endif
+ #if BUILD_REMOTE_BITBANG == 1
+ 		&remote_bitbang_adapter_driver,
++		&pb2_pru_adapter_driver,
+ #endif
+ #if BUILD_HLADAPTER == 1
+ 		&hl_adapter_driver,

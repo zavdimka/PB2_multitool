@@ -1,0 +1,42 @@
+From 54824ad183571f15ac69031b2b20f9e9c4ab4ca0 Mon Sep 17 00:00:00 2001
+From: PB2 Multitool <pb2-multitool@local>
+Date: Thu, 8 Oct 2026 20:25:00 +0000
+Subject: [PATCH] Input: edt-ft5x06: add FT6336 compatible
+
+FT6336U uses the same two-touch register protocol as FT6236. Add an
+explicit compatible so boards do not need to claim the older part.
+
+Signed-off-by: PB2 Multitool <pb2-multitool@local>
+---
+ Documentation/devicetree/bindings/input/touchscreen/edt-ft5x06.yaml | 1 +
+ drivers/input/touchscreen/edt-ft5x06.c                              | 2 ++
+ 2 files changed, 3 insertions(+)
+
+--- a/Documentation/devicetree/bindings/input/touchscreen/edt-ft5x06.yaml
++++ b/Documentation/devicetree/bindings/input/touchscreen/edt-ft5x06.yaml
+@@ -40,6 +40,7 @@ properties:
+       - focaltech,ft5426
+       - focaltech,ft5452
+       - focaltech,ft6236
++      - focaltech,ft6336
+       - focaltech,ft8201
+       - focaltech,ft8719
+ 
+--- a/drivers/input/touchscreen/edt-ft5x06.c
++++ b/drivers/input/touchscreen/edt-ft5x06.c
+@@ -1601,5 +1601,6 @@ static const struct i2c_device_id edt_ft5x06_ts_id[] = {
+ 	/* Note no edt- prefix for compatibility with the ft6236.c driver */
+ 	{ .name = "ft6236", .driver_data = (long)&edt_ft6236_data },
++	{ .name = "ft6336", .driver_data = (long)&edt_ft6236_data },
+ 	{ .name = "ft8201", .driver_data = (long)&edt_ft8201_data },
+ 	{ .name = "ft8719", .driver_data = (long)&edt_ft8719_data },
+ 	{ /* sentinel */ }
+@@ -1617,5 +1618,6 @@ static const struct of_device_id edt_ft5x06_of_match[] = {
+ 	/* Note focaltech vendor prefix for compatibility with ft6236.c */
+ 	{ .compatible = "focaltech,ft6236", .data = &edt_ft6236_data },
++	{ .compatible = "focaltech,ft6336", .data = &edt_ft6236_data },
+ 	{ .compatible = "focaltech,ft8201", .data = &edt_ft8201_data },
+ 	{ .compatible = "focaltech,ft8719", .data = &edt_ft8719_data },
+ 	{ /* sentinel */ }
+-- 
+2.47.3

@@ -1,0 +1,40 @@
+From b73e9ab16cc32d2ae0a2906be3e1b67b4de63c84 Mon Sep 17 00:00:00 2001
+From: PB2 Multitool <pb2-multitool@local>
+Date: Thu, 8 Oct 2026 15:40:00 +0000
+Subject: [PATCH] arm64: dts: ti: add multitool INA238 and TPS55289
+
+Describe the INA238 at address 0x40 with the schematic's 100 mOhm
+shunt and the TPS55289 at address 0x75. The TPS55289 differential
+divider halves the sensed voltage, so its effective shunt is 50 mOhm.
+Both devices are connected to I2C2.
+
+Signed-off-by: PB2 Multitool <pb2-multitool@local>
+---
+--- a/arch/arm64/boot/dts/ti/k3-am62-pocketbeagle2-multitool.dtsi
++++ b/arch/arm64/boot/dts/ti/k3-am62-pocketbeagle2-multitool.dtsi
+@@ -126,6 +126,25 @@
+ &main_i2c2 {
+ 	pinctrl-0 = <&main_i2c2_pins_default
+ 		     &pb2_multitool_mcu_short_disable_pins>;
++
++	ina238: power-monitor@40 {
++		compatible = "ti,ina238";
++		reg = <0x40>;
++		shunt-resistor = <100000>;
++		/* Wide range at boot; switch shunt_gain to 1 for precision. */
++		ti,shunt-gain = <4>;
++	};
++
++	tps55289: regulator@75 {
++		compatible = "ti,tps55289";
++		reg = <0x75>;
++		regulator-name = "multitool-vout";
++		regulator-min-microvolt = <800000>;
++		regulator-max-microvolt = <20000000>;
++		regulator-min-microamp = <10000>;
++		regulator-max-microamp = <1270000>;
++		ti,current-sense-micro-ohms = <50000>;
++	};
+ };
+ 
+ &main_i2c3 {

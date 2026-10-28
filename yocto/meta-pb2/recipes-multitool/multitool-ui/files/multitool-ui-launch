@@ -1,0 +1,11 @@
+#!/bin/sh
+export SLINT_BACKEND=linuxkms-software
+export SLINT_FULLSCREEN=1
+
+attempt=0
+while [ ! -e /dev/dri/card0 ] && [ "$attempt" -lt 100 ]; do
+    sleep 0.1
+    attempt=$((attempt + 1))
+done
+
+exec /usr/bin/multitool-ui

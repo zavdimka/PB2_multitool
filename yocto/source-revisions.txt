@@ -1,0 +1,8 @@
+Yocto release: scarthgap
+
+poky               4fb7016a07507683359ebd620f1951fd5ea44bfa
+meta-openembedded   0f00f8b9a21950640da8c5707343e5540133f86e
+meta-arm            0a4b911d9fd63ab29c4532a907fae3282dbdcfe4
+meta-ti             a28461e373c3b7c05d7eddb5067a114babcf5537
+meta-rust-bin       eaea247f32f247ab525112d2fbc16e16a553d880
+meta-slint          09c45d93d7b5cd31a786161f077bdfec839ceeea

@@ -1,0 +1,1959 @@
+import { ListView } from "std-widgets.slint";
+
+export struct CatalogEntry {
+    name: string,
+    path: string,
+}
+
+component PrimaryButton inherits Rectangle {
+    in property <string> label;
+    in property <brush> accent: #3978f6;
+    callback activated;
+    height: 42px;
+    border-radius: 8px;
+    background: touch.pressed ? accent.darker(18%) : accent;
+
+    Text {
+        text: root.label;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea { clicked => { root.activated(); } }
+}
+
+component SmallButton inherits Rectangle {
+    in property <string> label;
+    in property <brush> accent: #27344a;
+    callback activated;
+    height: 34px;
+    border-radius: 7px;
+    background: touch.pressed ? #34445e : accent;
+
+    Text {
+        text: root.label;
+        color: #d9e4f5;
+        font-size: 11px;
+        font-weight: 650;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea { clicked => { root.activated(); } }
+}
+
+component SegmentButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> selected;
+    callback activated;
+    height: 36px;
+    border-radius: 7px;
+    background: selected ? #3978f6 : #202c40;
+
+    Text {
+        text: root.label;
+        color: selected ? #ffffff : #91a0b7;
+        font-size: 12px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea { clicked => { root.activated(); } }
+}
+
+
+component StatCard inherits Rectangle {
+    in property <string> caption;
+    in property <string> value;
+    in property <brush> accent: #eaf1fb;
+    height: 44px;
+    border-radius: 7px;
+    background: #111a28;
+
+    VerticalLayout {
+        padding-left: 7px;
+        padding-right: 7px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        spacing: 1px;
+
+        Text {
+            text: root.caption;
+            color: #65758e;
+            font-size: 8px;
+            font-weight: 700;
+        }
+
+        Text {
+            text: root.value;
+            color: root.accent;
+            font-size: 14px;
+            font-weight: 700;
+        }
+    }
+}
+
+component PinCell inherits Rectangle {
+    in property <string> signal;
+    in property <string> pin;
+    in property <brush> accent: #75a7ff;
+    height: 53px;
+    border-radius: 7px;
+    background: #202c40;
+
+    VerticalLayout {
+        padding: 7px;
+        spacing: 2px;
+
+        Text {
+            text: root.signal;
+            color: root.accent;
+            font-size: 11px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.pin;
+            color: #aebbd0;
+            font-size: 10px;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+
+component LogicTrace inherits Rectangle {
+    in property <string> channel;
+    in property <string> pin;
+    in property <brush> accent;
+    in property <bool> shifted;
+    in property <float> zoom: 1.0;
+    in property <length> pan: 0px;
+    height: 38px;
+    background: transparent;
+    clip: true;
+
+    VerticalLayout {
+        x: 0px;
+        width: 40px;
+        spacing: 0px;
+
+        Text {
+            text: root.channel;
+            color: root.accent;
+            font-size: 10px;
+            font-weight: 700;
+            vertical-alignment: bottom;
+        }
+
+        Text {
+            text: root.pin;
+            color: #65758e;
+            font-size: 7px;
+            vertical-alignment: top;
+        }
+    }
+
+    Rectangle { x: 44px + root.pan; y: shifted ? 25px : 10px; width: 30px * root.zoom; height: 2px; background: root.accent; }
+    Rectangle { x: 44px + root.pan + 30px * root.zoom; y: 10px; width: 2px; height: 17px; background: root.accent; }
+    Rectangle { x: 46px + root.pan + 30px * root.zoom; y: shifted ? 10px : 25px; width: 40px * root.zoom; height: 2px; background: root.accent; }
+    Rectangle { x: 46px + root.pan + 70px * root.zoom; y: 10px; width: 2px; height: 17px; background: root.accent; }
+    Rectangle { x: 48px + root.pan + 70px * root.zoom; y: shifted ? 25px : 10px; width: 55px * root.zoom; height: 2px; background: root.accent; }
+    Rectangle { x: 48px + root.pan + 125px * root.zoom; y: 10px; width: 2px; height: 17px; background: root.accent; }
+    Rectangle { x: 50px + root.pan + 125px * root.zoom; y: shifted ? 10px : 25px; width: 43px * root.zoom; height: 2px; background: root.accent; }
+    Rectangle { x: 50px + root.pan + 168px * root.zoom; y: 10px; width: 2px; height: 17px; background: root.accent; }
+    Rectangle { x: 52px + root.pan + 168px * root.zoom; y: shifted ? 25px : 10px; width: 50px * root.zoom; height: 2px; background: root.accent; }
+}
+
+component ScopePlot inherits Rectangle {
+    in property <brush> accent: #ffb84d;
+    border-radius: 8px;
+    clip: true;
+    background: #111a28;
+    border-width: 1px;
+    border-color: #2a3850;
+
+    Rectangle { x: 0px; y: 55px; width: 100%; height: 1px; background: #263247; }
+    Rectangle { x: 0px; y: 110px; width: 100%; height: 1px; background: #334159; }
+    Rectangle { x: 0px; y: 165px; width: 100%; height: 1px; background: #263247; }
+    Rectangle { x: 56px; y: 0px; width: 1px; height: 100%; background: #263247; }
+    Rectangle { x: 112px; y: 0px; width: 1px; height: 100%; background: #263247; }
+    Rectangle { x: 168px; y: 0px; width: 1px; height: 100%; background: #263247; }
+    Rectangle { x: 224px; y: 0px; width: 1px; height: 100%; background: #263247; }
+
+    Rectangle { x: 8px; y: 78px; width: 7px; height: 12px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 20px; y: 61px; width: 7px; height: 46px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 32px; y: 39px; width: 7px; height: 90px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 44px; y: 21px; width: 7px; height: 126px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 56px; y: 34px; width: 7px; height: 100px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 68px; y: 60px; width: 7px; height: 48px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 80px; y: 78px; width: 7px; height: 12px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 92px; y: 63px; width: 7px; height: 42px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 104px; y: 40px; width: 7px; height: 88px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 116px; y: 22px; width: 7px; height: 124px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 128px; y: 35px; width: 7px; height: 98px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 140px; y: 62px; width: 7px; height: 44px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 152px; y: 78px; width: 7px; height: 12px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 164px; y: 61px; width: 7px; height: 46px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 176px; y: 38px; width: 7px; height: 92px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 188px; y: 20px; width: 7px; height: 128px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 200px; y: 34px; width: 7px; height: 100px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 212px; y: 60px; width: 7px; height: 48px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 224px; y: 78px; width: 7px; height: 12px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 236px; y: 62px; width: 7px; height: 44px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 248px; y: 39px; width: 7px; height: 90px; border-radius: 2px; background: root.accent; }
+    Rectangle { x: 260px; y: 23px; width: 7px; height: 122px; border-radius: 2px; background: root.accent; }
+}
+
+
+component SelectorRow inherits Rectangle {
+    in property <string> caption;
+    in property <string> value;
+    in property <brush> accent: #75a7ff;
+    callback activated;
+    height: 42px;
+    border-radius: 7px;
+    background: touch.pressed ? #273650 : #1b283a;
+    border-width: 1px;
+    border-color: #2a3850;
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 7px;
+
+        VerticalLayout {
+            spacing: 0px;
+
+            Text {
+                text: root.caption;
+                color: #65758e;
+                font-size: 8px;
+                font-weight: 700;
+            }
+
+            Text {
+                text: root.value;
+                color: root.accent;
+                font-size: 11px;
+                font-weight: 700;
+                overflow: elide;
+            }
+        }
+
+        Text {
+            width: 12px;
+            text: ">";
+            color: #8292aa;
+            font-size: 14px;
+            font-weight: 700;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+        }
+    }
+
+    touch := TouchArea { clicked => { root.activated(); } }
+}
+
+component ConfigOption inherits Rectangle {
+    in property <string> title;
+    in property <string> detail;
+    in property <bool> selected;
+    in property <brush> accent: #75a7ff;
+    callback activated;
+    height: 44px;
+    border-radius: 7px;
+    background: selected ? accent.with-alpha(17%) : (touch.pressed ? #273650 : #151f2e);
+    border-width: selected ? 1px : 0px;
+    border-color: selected ? accent : transparent;
+
+    HorizontalLayout {
+        padding-left: 9px;
+        padding-right: 9px;
+        spacing: 8px;
+
+        Rectangle {
+            width: 8px;
+            height: 8px;
+            border-radius: 4px;
+            background: root.selected ? root.accent : #3a4960;
+        }
+
+        VerticalLayout {
+            spacing: 0px;
+
+            Text {
+                text: root.title;
+                color: root.selected ? #eef4fc : #c0ccdc;
+                font-size: 11px;
+                font-weight: 700;
+                overflow: elide;
+            }
+
+            Text {
+                text: root.detail;
+                color: #71819a;
+                font-size: 8px;
+                overflow: elide;
+            }
+        }
+
+        Text {
+            width: 14px;
+            text: root.selected ? "OK" : "";
+            color: root.accent;
+            font-size: 8px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea { clicked => { root.activated(); } }
+}
+
+component ModeChoice inherits Rectangle {
+    in property <string> glyph;
+    in property <string> title;
+    in property <string> subtitle;
+    in property <brush> accent;
+    in property <bool> selected;
+    callback activated;
+    border-radius: 12px;
+    background: selected ? accent.with-alpha(18%) : (touch.pressed ? #243149 : #151f2e);
+    border-width: selected ? 2px : 1px;
+    border-color: selected ? accent : #2a3850;
+
+    VerticalLayout {
+        padding: 13px;
+        spacing: 6px;
+        alignment: center;
+
+        Rectangle {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+            background: root.accent.with-alpha(18%);
+
+            Text {
+                text: root.glyph;
+                color: root.accent;
+                font-size: 22px;
+                font-weight: 800;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: root.title;
+            color: #eef4fc;
+            font-size: 13px;
+            font-weight: 800;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.subtitle;
+            color: #8292aa;
+            font-size: 9px;
+            horizontal-alignment: center;
+        }
+
+        Rectangle { vertical-stretch: 1; background: transparent; }
+
+        Rectangle {
+            height: 25px;
+            border-radius: 6px;
+            background: root.selected ? root.accent : #243149;
+
+            Text {
+                text: root.selected ? "ACTIVE" : "SELECT";
+                color: root.selected ? #ffffff : #b9c7da;
+                font-size: 9px;
+                font-weight: 750;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    touch := TouchArea { clicked => { root.activated(); } }
+}
+
+export component AppWindow inherits Window {
+    title: "PB2 Multitool";
+    width: 480px;
+    height: 320px;
+    background: #0c131e;
+
+    in-out property <int> page: 0;
+    in-out property <bool> swd-mode: true;
+    in-out property <bool> mode-menu-open: false;
+    in-out property <bool> program-menu-open: false;
+    in-out property <int> program-menu-tab: 0;
+    in-out property <bool> read-operation: false;
+    in-out property <bool> programmer-remote: false;
+    in-out property <string> programmer-owner-text: "LOCAL SCREEN";
+    in-out property <string> selected-mcu: "STM32F407VG";
+    in-out property <string> selected-profile: "target/stm32f4x.cfg";
+    in-out property <string> selected-image: "/media/usb/firmware.hex";
+    in-out property <[CatalogEntry]> mcu-configs: [
+        { name: "STM32F407VG", path: "target/stm32f4x.cfg" },
+        { name: "STM32H743ZI", path: "target/stm32h7x.cfg" },
+        { name: "RP2040", path: "target/rp2040.cfg" },
+    ];
+    in-out property <[CatalogEntry]> profile-configs: [
+        { name: "STM32F4 generic", path: "target/stm32f4x.cfg" },
+        { name: "Nucleo F4", path: "board/st_nucleo_f4.cfg" },
+        { name: "RP2040 generic", path: "target/rp2040.cfg" },
+    ];
+    in-out property <[CatalogEntry]> hex-files: [
+        { name: "firmware.hex", path: "/media/usb/firmware.hex" },
+        { name: "bootloader.hex", path: "/media/usb/bootloader.hex" },
+        { name: "readback.hex", path: "/media/usb/readback.hex" },
+    ];
+    in-out property <bool> power-menu-open: false;
+    in-out property <int> power-menu-tab: 0;
+    in-out property <bool> power-forced-pwm: false;
+    in-out property <bool> meter-high-resolution: true;
+    in-out property <bool> vref-link-enabled: false;
+    in-out property <string> power-current-limit-text: "500 mA";
+    in-out property <string> power-aux-text: "0.00 V";
+    in-out property <string> power-shunt-text: "0.000 mV";
+    in-out property <bool> power-enabled: false;
+    in-out property <string> power-current-text: "0.0 mA";
+    in-out property <string> power-voltage-text: "5.00 V";
+    // AUX measures VREF through a 1:2 divider; backend publishes AUX * 2.0.
+    in-out property <string> power-vref-text: "0.00 V";
+    in-out property <bool> logic-menu-open: false;
+    in-out property <int> logic-menu-tab: 0;
+    in-out property <bool> logic-running: false;
+    in-out property <int> logic-trigger-type: 0;
+    in-out property <int> logic-trigger-source: 0;
+    in-out property <int> logic-trigger-edge: 0;
+    in-out property <int> logic-timebase-index: 3;
+    in-out property <int> logic-zoom-start-index: 3;
+    in-out property <length> logic-pan: 0px;
+    in-out property <length> logic-drag-start-pan: 0px;
+    in-out property <length> logic-zoom-start-pan: 0px;
+    property <float> logic-zoom-factor: root.logic-timebase-index == 0 ? 8.0
+        : root.logic-timebase-index == 1 ? 4.0
+        : root.logic-timebase-index == 2 ? 2.0
+        : root.logic-timebase-index == 3 ? 1.0
+        : root.logic-timebase-index == 4 ? 0.5
+        : root.logic-timebase-index == 5 ? 0.25 : 0.125;
+    in-out property <int> logic-sample-rate-index: 1;
+    in-out property <int> logic-depth-index: 2;
+    in-out property <int> logic-pretrigger-index: 2;
+    in-out property <bool> logic-ch1-enabled: true;
+    in-out property <bool> logic-ch2-enabled: true;
+    in-out property <bool> logic-ch3-enabled: true;
+    in-out property <bool> logic-ch4-enabled: true;
+    // Pattern value: 0 = don't care, 1 = low, 2 = high.
+    in-out property <int> logic-pattern-ch1: 2;
+    in-out property <int> logic-pattern-ch2: 0;
+    in-out property <int> logic-pattern-ch3: 1;
+    in-out property <int> logic-pattern-ch4: 0;
+    property <string> logic-trigger-text: root.logic-trigger-type == 0
+        ? (root.logic-trigger-edge == 0 ? "EDGE RISE" : root.logic-trigger-edge == 1 ? "EDGE FALL" : "EDGE BOTH")
+        : root.logic-trigger-type == 1 ? "LEVEL" : "PATTERN";
+    property <string> logic-timebase-text: root.logic-timebase-index == 0 ? "100 ns/div"
+        : root.logic-timebase-index == 1 ? "200 ns/div"
+        : root.logic-timebase-index == 2 ? "500 ns/div"
+        : root.logic-timebase-index == 3 ? "1 us/div"
+        : root.logic-timebase-index == 4 ? "2 us/div"
+        : root.logic-timebase-index == 5 ? "5 us/div" : "10 us/div";
+    in-out property <string> status-text: "Ready / PRU0 idle / PRU1 idle";
+    callback power-toggle(bool);
+    callback power-settings-apply;
+    callback vref-link-toggle(bool);
+    callback refresh;
+    callback reload-openocd-configs;
+    callback openocd-config-apply(string, bool);
+    callback browse-image;
+    callback start-pru;
+    callback scope-start;
+    callback scope-stop;
+
+    VerticalLayout {
+        padding: 7px;
+        spacing: 6px;
+
+        HorizontalLayout {
+            height: 30px;
+            spacing: 7px;
+
+            Rectangle {
+                width: 34px;
+                height: 28px;
+                border-radius: 6px;
+                background: root.page == 0 ? #3978f6 : root.page == 1 ? #258e6a : #bd7a22;
+
+                Text {
+                    text: root.page == 0 ? "P" : root.page == 1 ? "L" : "S";
+                    color: #ffffff;
+                    font-size: 13px;
+                    font-weight: 800;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                mode-touch := TouchArea {
+                    clicked => { root.mode-menu-open = true; }
+                }
+
+            }
+
+            Rectangle { horizontal-stretch: 1; background: transparent; }
+
+            Rectangle {
+                width: 104px;
+                height: 28px;
+                border-radius: 7px;
+                background: #151f2e;
+                border-width: 1px;
+                border-color: #202d41;
+
+                HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    spacing: 6px;
+
+                    Text {
+                        text: "I";
+                        color: #65758e;
+                        font-size: 9px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: root.power-current-text;
+                        color: root.power-enabled ? #51d6a1 : #aab7c9;
+                        font-size: 12px;
+                        font-weight: 750;
+                        vertical-alignment: center;
+                    }
+                }
+
+                current-touch := TouchArea {
+                    clicked => { root.power-menu-tab = 1; root.power-menu-open = true; }
+                }
+            }
+
+            Rectangle {
+                width: 80px;
+                height: 28px;
+                border-radius: 7px;
+                background: #151f2e;
+                border-width: 1px;
+                border-color: #202d41;
+
+                HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    spacing: 6px;
+
+                    Text {
+                        text: "VSET";
+                        color: #65758e;
+                        font-size: 8px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: root.power-voltage-text;
+                        color: #ffb84d;
+                        font-size: 11px;
+                        font-weight: 750;
+                        vertical-alignment: center;
+                    }
+                }
+
+                voltage-touch := TouchArea {
+                    clicked => { root.power-menu-tab = 0; root.power-menu-open = true; }
+                }
+            }
+
+            Rectangle {
+                width: 80px;
+                height: 28px;
+                border-radius: 7px;
+                background: #151f2e;
+                border-width: 1px;
+                border-color: #202d41;
+
+                HorizontalLayout {
+                    padding-left: 7px;
+                    padding-right: 7px;
+                    spacing: 5px;
+
+                    Text {
+                        text: "VREF";
+                        color: #65758e;
+                        font-size: 8px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: root.power-vref-text;
+                        color: #75a7ff;
+                        font-size: 10px;
+                        font-weight: 750;
+                        vertical-alignment: center;
+                    }
+                }
+
+                vref-touch := TouchArea {
+                    clicked => { root.power-menu-tab = 2; root.power-menu-open = true; }
+                }
+            }
+
+
+
+            Rectangle {
+                width: 54px;
+                height: 28px;
+                border-radius: 7px;
+                background: power-touch.pressed
+                    ? (root.power-enabled ? #237557 : #314058)
+                    : (root.power-enabled ? #258e6a : #202c40);
+                border-width: 1px;
+                border-color: root.power-enabled ? #51d6a1 : #34445e;
+
+                Text {
+                    text: root.power-enabled ? "ON" : "OFF";
+                    color: root.power-enabled ? #ffffff : #a8b5c8;
+                    font-size: 10px;
+                    font-weight: 800;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                power-touch := TouchArea {
+                    clicked => {
+                        root.power-enabled = !root.power-enabled;
+                        root.power-toggle(root.power-enabled);
+                    }
+                }
+            }
+
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+            border-radius: 10px;
+            background: #151f2e;
+            border-width: 1px;
+            border-color: #202d41;
+            clip: true;
+
+            if root.page == 0 && !root.programmer-remote: HorizontalLayout {
+                padding: 9px;
+                spacing: 9px;
+
+                VerticalLayout {
+                    width: 166px;
+                    spacing: 6px;
+
+                    HorizontalLayout {
+                        height: 36px;
+                        spacing: 5px;
+
+                        SegmentButton {
+                            label: "SWD";
+                            selected: root.swd-mode;
+                            activated => { root.swd-mode = true; }
+                        }
+
+                        SegmentButton {
+                            label: "JTAG";
+                            selected: !root.swd-mode;
+                            activated => { root.swd-mode = false; }
+                        }
+                    }
+
+                    SelectorRow {
+                        caption: "MCU";
+                        value: root.selected-mcu;
+                        activated => {
+                            root.program-menu-tab = 0;
+                            root.program-menu-open = true;
+                            root.reload-openocd-configs();
+                        }
+                    }
+
+                    SelectorRow {
+                        caption: "OPENOCD PROFILE";
+                        value: root.selected-profile;
+                        activated => {
+                            root.program-menu-tab = 1;
+                            root.program-menu-open = true;
+                            root.reload-openocd-configs();
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                        border-radius: 7px;
+                        background: #182337;
+
+                        Text {
+                            text: root.status-text;
+                            color: #8fa0b8;
+                            font-size: 9px;
+                            wrap: word-wrap;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    PrimaryButton {
+                        label: root.read-operation ? "READ FLASH" : "PROGRAM";
+                        accent: root.read-operation ? #6d55bd : #3978f6;
+                        activated => { root.start-pru(); }
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 6px;
+
+                    SelectorRow {
+                        caption: root.read-operation ? "OUTPUT HEX" : "INPUT HEX";
+                        value: root.selected-image;
+                        accent: #ffb84d;
+                        activated => {
+                            root.program-menu-tab = 2;
+                            root.program-menu-open = true;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        height: 36px;
+                        spacing: 5px;
+
+                        SegmentButton {
+                            label: "PROGRAM";
+                            selected: !root.read-operation;
+                            activated => { root.read-operation = false; }
+                        }
+
+                        SegmentButton {
+                            label: "READ";
+                            selected: root.read-operation;
+                            activated => { root.read-operation = true; }
+                        }
+
+                        Rectangle {
+                            width: 82px;
+                            border-radius: 7px;
+                            background: #111a28;
+
+                            VerticalLayout {
+                                padding: 5px;
+                                spacing: 0px;
+
+                                Text {
+                                    text: "CLOCK";
+                                    color: #65758e;
+                                    font-size: 7px;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                }
+
+                                Text {
+                                    text: "1.00 MHz";
+                                    color: #dce6f4;
+                                    font-size: 11px;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        height: 16px;
+
+                        Text {
+                            text: "PINOUT";
+                            color: #71819a;
+                            font-size: 8px;
+                            font-weight: 700;
+                        }
+
+                        Rectangle { horizontal-stretch: 1; background: transparent; }
+
+                        Text {
+                            text: "EDIT >";
+                            color: #75a7ff;
+                            font-size: 8px;
+                            font-weight: 700;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 5px;
+                        PinCell { signal: "CLK"; pin: "IO0"; }
+                        PinCell { signal: root.swd-mode ? "SWDIO" : "TMS"; pin: "IO1"; }
+                        PinCell { signal: root.swd-mode ? "RESET" : "TDI"; pin: root.swd-mode ? "IO4" : "IO2"; }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 5px;
+                        PinCell { signal: "TDO"; pin: "IO3"; accent: #9c83ff; }
+                        PinCell { signal: "nSRST"; pin: "IO4"; accent: #9c83ff; }
+                        PinCell { signal: "nTRST"; pin: "IO5"; accent: #9c83ff; }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                        border-radius: 6px;
+                        background: #182337;
+
+                        Text {
+                            text: root.read-operation ? "Flash will be saved as Intel HEX" : "Erase / program / verify";
+                            color: #7f91aa;
+                            font-size: 9px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            if root.page == 0 && root.programmer-remote: Rectangle {
+                border-radius: 8px;
+                background: #111a28;
+                border-width: 1px;
+                border-color: #3978f6;
+
+                VerticalLayout {
+                    padding: 18px;
+                    spacing: 8px;
+                    Rectangle { vertical-stretch: 1; background: transparent; }
+                    Text {
+                        text: "REMOTE OPENOCD SESSION";
+                        color: #75a7ff;
+                        font-size: 17px;
+                        font-weight: 800;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: root.programmer-owner-text;
+                        color: #eef4fc;
+                        font-size: 13px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: "USB NETWORK  192.168.7.2:3333";
+                        color: #51d6a1;
+                        font-size: 11px;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: "Programmer controls are locked until the remote client disconnects";
+                        color: #8fa0b8;
+                        font-size: 9px;
+                        wrap: word-wrap;
+                        horizontal-alignment: center;
+                    }
+                    Rectangle { vertical-stretch: 1; background: transparent; }
+                }
+            }
+
+            if root.page == 1: HorizontalLayout {
+                padding: 7px;
+                spacing: 7px;
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    border-radius: 8px;
+                    clip: true;
+                    background: #111a28;
+                    border-width: 1px;
+                    border-color: pinch.active ? #258e6a : #243248;
+
+                    Rectangle { x: 74px; y: 0px; width: 1px; height: 100%; background: #1d293b; }
+                    Rectangle { x: 132px; y: 0px; width: 1px; height: 100%; background: #1d293b; }
+                    Rectangle { x: 190px; y: 0px; width: 1px; height: 100%; background: #1d293b; }
+                    Rectangle { x: 248px; y: 0px; width: 1px; height: 100%; background: #1d293b; }
+
+                    VerticalLayout {
+                        padding: 7px;
+                        spacing: 2px;
+
+                        HorizontalLayout {
+                            height: 25px;
+                            spacing: 4px;
+
+                            Text {
+                                width: 52px;
+                                text: root.logic-running ? "CAPTURE" : "4 CH";
+                                color: root.logic-running ? #51d6a1 : #65758e;
+                                font-size: 8px;
+                                font-weight: 750;
+                                vertical-alignment: center;
+                            }
+
+                            Rectangle { horizontal-stretch: 1; background: transparent; }
+
+                            Rectangle {
+                                width: 78px;
+                                border-radius: 6px;
+                                background: trigger-touch.pressed ? #29453e : #18352e;
+                                Text {
+                                    text: root.logic-trigger-text;
+                                    color: #51d6a1;
+                                    font-size: 8px;
+                                    font-weight: 750;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                                trigger-touch := TouchArea {
+                                    clicked => {
+                                        root.logic-menu-tab = 2;
+                                        root.logic-menu-open = true;
+                                    }
+                                }
+                            }
+
+                            Text {
+                                width: 58px;
+                                text: root.logic-timebase-text;
+                                color: #aab8ca;
+                                font-size: 8px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+
+                            SmallButton {
+                                width: 25px;
+                                height: 25px;
+                                label: "-";
+                                activated => {
+                                    if root.logic-timebase-index < 6 {
+                                        root.logic-pan = 180px - (180px - root.logic-pan) * 0.5;
+                                        root.logic-timebase-index += 1;
+                                    }
+                                }
+                            }
+
+                            SmallButton {
+                                width: 25px;
+                                height: 25px;
+                                label: "+";
+                                activated => {
+                                    if root.logic-timebase-index > 0 {
+                                        root.logic-pan = 180px - (180px - root.logic-pan) * 2.0;
+                                        root.logic-timebase-index -= 1;
+                                    }
+                                }
+                            }
+
+                            SmallButton {
+                                width: 50px;
+                                height: 25px;
+                                label: "SETUP";
+                                activated => {
+                                    root.logic-menu-tab = 0;
+                                    root.logic-menu-open = true;
+                                }
+                            }
+
+                            PrimaryButton {
+                                width: 52px;
+                                height: 25px;
+                                label: root.logic-running ? "STOP" : "RUN";
+                                accent: root.logic-running ? #9c3948 : #258e6a;
+                                activated => {
+                                    root.logic-running = !root.logic-running;
+                                    if root.logic-running {
+                                        root.start-pru();
+                                    }
+                                }
+                            }
+                        }
+
+                        LogicTrace { channel: "CH1"; pin: "IO8"; accent: root.logic-ch1-enabled ? #51d6a1 : #405064; shifted: false; zoom: root.logic-zoom-factor; pan: root.logic-pan; }
+                        LogicTrace { channel: "CH2"; pin: "IO9"; accent: root.logic-ch2-enabled ? #64b5ff : #405064; shifted: true; zoom: root.logic-zoom-factor; pan: root.logic-pan; }
+                        LogicTrace { channel: "CH3"; pin: "IO10"; accent: root.logic-ch3-enabled ? #ffb84d : #405064; shifted: false; zoom: root.logic-zoom-factor; pan: root.logic-pan; }
+                        LogicTrace { channel: "CH4"; pin: "IO11"; accent: root.logic-ch4-enabled ? #b28cff : #405064; shifted: true; zoom: root.logic-zoom-factor; pan: root.logic-pan; }
+
+                        Rectangle { vertical-stretch: 1; background: transparent; }
+
+                        HorizontalLayout {
+                            height: 13px;
+                            Text {
+                                text: pinch.active ? "ZOOMING" : "DRAG PAN / WHEEL ZOOM";
+                                color: pinch.active ? #51d6a1 : #65758e;
+                                font-size: 7px;
+                                font-weight: 700;
+                            }
+                            Rectangle { horizontal-stretch: 1; background: transparent; }
+                            Text {
+                                text: "DIR: TARGET > PRU";
+                                color: #65758e;
+                                font-size: 7px;
+                            }
+                        }
+                    }
+
+                    viewport-touch := TouchArea {
+                        x: 44px;
+                        y: 34px;
+                        width: parent.width - 44px;
+                        height: parent.height - 50px;
+                        mouse-cursor: move;
+                        pointer-event(event) => {
+                            if event.kind == PointerEventKind.down {
+                                root.logic-drag-start-pan = root.logic-pan;
+                            }
+                        }
+                        moved => {
+                            if self.pressed {
+                                root.logic-pan = max(-800px, min(240px,
+                                    root.logic-drag-start-pan + self.mouse-x - self.pressed-x));
+                            }
+                        }
+                        scroll-event(event) => {
+                            if event.delta-y > 0px && root.logic-timebase-index > 0 {
+                                root.logic-pan = self.mouse-x
+                                    - (self.mouse-x - root.logic-pan) * 2.0;
+                                root.logic-timebase-index -= 1;
+                            } else if event.delta-y < 0px && root.logic-timebase-index < 6 {
+                                root.logic-pan = self.mouse-x
+                                    - (self.mouse-x - root.logic-pan) * 0.5;
+                                root.logic-timebase-index += 1;
+                            }
+                            accept
+                        }
+                    }
+
+                    pinch := ScaleRotateGestureHandler {
+                        enabled: !root.logic-menu-open;
+                        started => {
+                            root.logic-zoom-start-index = root.logic-timebase-index;
+                            root.logic-zoom-start-pan = root.logic-pan;
+                        }
+                        updated => {
+                            if self.scale > 1.25 {
+                                root.logic-timebase-index = root.logic-zoom-start-index > 0
+                                    ? root.logic-zoom-start-index - 1 : 0;
+                                if root.logic-zoom-start-index > 0 {
+                                    root.logic-pan = self.center.x - 44px
+                                        - (self.center.x - 44px - root.logic-zoom-start-pan) * 2.0;
+                                }
+                            } else if self.scale < 0.80 {
+                                root.logic-timebase-index = root.logic-zoom-start-index < 6
+                                    ? root.logic-zoom-start-index + 1 : 6;
+                                if root.logic-zoom-start-index < 6 {
+                                    root.logic-pan = self.center.x - 44px
+                                        - (self.center.x - 44px - root.logic-zoom-start-pan) * 0.5;
+                                }
+                            } else {
+                                root.logic-timebase-index = root.logic-zoom-start-index;
+                                root.logic-pan = root.logic-zoom-start-pan;
+                            }
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    width: 88px;
+                    spacing: 7px;
+
+                    PrimaryButton {
+                        label: root.logic-running ? "STOP" : "RUN";
+                        accent: root.logic-running ? #9c3948 : #258e6a;
+                        activated => {
+                            root.logic-running = !root.logic-running;
+                            if root.logic-running {
+                                root.start-pru();
+                            }
+                        }
+                    }
+
+                    SmallButton {
+                        label: "SETUP";
+                        activated => {
+                            root.logic-menu-tab = 0;
+                            root.logic-menu-open = true;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        height: 34px;
+                        spacing: 5px;
+
+                        SmallButton {
+                            label: "-";
+                            activated => {
+                                if root.logic-timebase-index < 6 {
+                                    root.logic-pan = 120px - (120px - root.logic-pan) * 0.5;
+                                    root.logic-timebase-index += 1;
+                                }
+                            }
+                        }
+
+                        SmallButton {
+                            label: "+";
+                            activated => {
+                                if root.logic-timebase-index > 0 {
+                                    root.logic-pan = 120px - (120px - root.logic-pan) * 2.0;
+                                    root.logic-timebase-index -= 1;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 42px;
+                        border-radius: 7px;
+                        background: #111a28;
+                        VerticalLayout {
+                            padding: 5px;
+                            spacing: 1px;
+                            Text { text: "TRIGGER"; color: #65758e; font-size: 7px; font-weight: 700; horizontal-alignment: center; }
+                            Text { text: root.logic-trigger-text; color: #51d6a1; font-size: 9px; font-weight: 750; horizontal-alignment: center; }
+                        }
+                    }
+
+                    Rectangle { vertical-stretch: 1; background: transparent; }
+
+                    Text {
+                        text: "2-FINGER\nZOOM";
+                        color: #71819a;
+                        font-size: 7px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+
+            if root.page == 2: HorizontalLayout {
+                padding: 9px;
+                spacing: 8px;
+
+                ScopePlot { horizontal-stretch: 1; }
+
+                VerticalLayout {
+                    width: 112px;
+                    spacing: 4px;
+
+                    StatCard { caption: "CH1"; value: "+3.284 V"; accent: #ffb84d; }
+                    StatCard { caption: "FREQUENCY"; value: "1.02 kHz"; }
+
+                    SmallButton { label: "1 V/div"; }
+                    SmallButton { label: "100 us/div"; }
+                    SmallButton { label: "TRIGGER AUTO"; accent: #3b3225; }
+
+                    Rectangle { vertical-stretch: 1; background: transparent; }
+
+                    HorizontalLayout {
+                        height: 40px;
+                        spacing: 5px;
+
+                        PrimaryButton {
+                            label: "RUN";
+                            accent: #bd7a22;
+                            activated => { root.scope-start(); }
+                        }
+
+                        PrimaryButton {
+                            label: "STOP";
+                            width: 45px;
+                            accent: #8e3744;
+                            activated => { root.scope-stop(); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if root.logic-menu-open: Rectangle {
+        x: 0px; y: 0px; width: 100%; height: 100%;
+        background: #0a101a;
+
+        VerticalLayout {
+            padding: 12px;
+            spacing: 8px;
+
+            HorizontalLayout {
+                height: 32px;
+                spacing: 8px;
+
+                VerticalLayout {
+                    spacing: 0px;
+                    Text { text: "LOGIC ANALYZER SETUP"; color: #eef4fc; font-size: 13px; font-weight: 800; }
+                    Text { text: "4 inputs / automatic level-shifter direction"; color: #71819a; font-size: 8px; }
+                }
+
+                Rectangle { horizontal-stretch: 1; background: transparent; }
+
+                Rectangle {
+                    width: 36px; height: 30px; border-radius: 7px;
+                    background: logic-close.pressed ? #35445d : #202c40;
+                    Text { text: "X"; color: #cbd7e8; font-size: 12px; font-weight: 750; horizontal-alignment: center; vertical-alignment: center; }
+                    logic-close := TouchArea { clicked => { root.logic-menu-open = false; } }
+                }
+            }
+
+            HorizontalLayout {
+                height: 34px;
+                spacing: 5px;
+                SegmentButton { label: "CAPTURE"; selected: root.logic-menu-tab == 0; activated => { root.logic-menu-tab = 0; } }
+                SegmentButton { label: "CHANNELS"; selected: root.logic-menu-tab == 1; activated => { root.logic-menu-tab = 1; } }
+                SegmentButton { label: "TRIGGER"; selected: root.logic-menu-tab == 2; activated => { root.logic-menu-tab = 2; } }
+            }
+
+            if root.logic-menu-tab == 0: HorizontalLayout {
+                spacing: 9px;
+
+                VerticalLayout {
+                    spacing: 5px;
+
+                    Text { height: 13px; text: "SAMPLE RATE"; color: #71819a; font-size: 8px; font-weight: 700; }
+                    HorizontalLayout {
+                        height: 34px; spacing: 4px;
+                        SegmentButton { label: "MAX"; selected: root.logic-sample-rate-index == 0; activated => { root.logic-sample-rate-index = 0; } }
+                        SegmentButton { label: "1/2"; selected: root.logic-sample-rate-index == 1; activated => { root.logic-sample-rate-index = 1; } }
+                        SegmentButton { label: "1/4"; selected: root.logic-sample-rate-index == 2; activated => { root.logic-sample-rate-index = 2; } }
+                        SegmentButton { label: "1/8"; selected: root.logic-sample-rate-index == 3; activated => { root.logic-sample-rate-index = 3; } }
+                    }
+
+                    Text { height: 13px; text: "CAPTURE DEPTH"; color: #71819a; font-size: 8px; font-weight: 700; }
+                    HorizontalLayout {
+                        height: 34px; spacing: 4px;
+                        SegmentButton { label: "512"; selected: root.logic-depth-index == 0; activated => { root.logic-depth-index = 0; } }
+                        SegmentButton { label: "1K"; selected: root.logic-depth-index == 1; activated => { root.logic-depth-index = 1; } }
+                        SegmentButton { label: "2K"; selected: root.logic-depth-index == 2; activated => { root.logic-depth-index = 2; } }
+                    }
+
+                    Text { height: 13px; text: "PRETRIGGER"; color: #71819a; font-size: 8px; font-weight: 700; }
+                    HorizontalLayout {
+                        height: 34px; spacing: 4px;
+                        SegmentButton { label: "25%"; selected: root.logic-pretrigger-index == 1; activated => { root.logic-pretrigger-index = 1; } }
+                        SegmentButton { label: "50%"; selected: root.logic-pretrigger-index == 2; activated => { root.logic-pretrigger-index = 2; } }
+                        SegmentButton { label: "75%"; selected: root.logic-pretrigger-index == 3; activated => { root.logic-pretrigger-index = 3; } }
+                    }
+                }
+
+                Rectangle {
+                    width: 132px;
+                    border-radius: 8px;
+                    background: #151f2e;
+
+                    VerticalLayout {
+                        padding: 9px;
+                        spacing: 5px;
+                        Text { text: "VIEW SCALE"; color: #65758e; font-size: 8px; font-weight: 700; }
+                        Text { text: root.logic-timebase-text; color: #51d6a1; font-size: 16px; font-weight: 800; }
+                        Text { text: "Use two fingers on the waveform to zoom."; color: #8fa0b8; font-size: 8px; wrap: word-wrap; }
+                        Rectangle { vertical-stretch: 1; background: transparent; }
+                        PrimaryButton { label: "DONE"; accent: #258e6a; activated => { root.logic-menu-open = false; } }
+                    }
+                }
+            }
+
+            if root.logic-menu-tab == 1: VerticalLayout {
+                spacing: 5px;
+
+                Text {
+                    height: 14px;
+                    text: "DIR pins are outputs and are set to TARGET > PRU automatically on RUN";
+                    color: #8fa0b8;
+                    font-size: 8px;
+                }
+
+                Rectangle {
+                    height: 39px; border-radius: 7px; background: #151f2e;
+                    HorizontalLayout {
+                        padding-left: 9px; padding-right: 7px; spacing: 8px;
+                        Text { width: 40px; text: "CH1"; color: #51d6a1; font-size: 11px; font-weight: 800; vertical-alignment: center; }
+                        Text { width: 135px; text: "IO8  P2.02 / R31.8"; color: #d5dfed; font-size: 9px; vertical-alignment: center; }
+                        Text { text: "DIR P2.04 / R30.9"; color: #71819a; font-size: 8px; vertical-alignment: center; }
+                        SegmentButton { width: 74px; label: root.logic-ch1-enabled ? "ON" : "OFF"; selected: root.logic-ch1-enabled; activated => { root.logic-ch1-enabled = !root.logic-ch1-enabled; } }
+                    }
+                }
+
+                Rectangle {
+                    height: 39px; border-radius: 7px; background: #151f2e;
+                    HorizontalLayout {
+                        padding-left: 9px; padding-right: 7px; spacing: 8px;
+                        Text { width: 40px; text: "CH2"; color: #64b5ff; font-size: 11px; font-weight: 800; vertical-alignment: center; }
+                        Text { width: 135px; text: "IO9  P2.18 / R31.17"; color: #d5dfed; font-size: 9px; vertical-alignment: center; }
+                        Text { text: "DIR P2.22 / R30.18"; color: #71819a; font-size: 8px; vertical-alignment: center; }
+                        SegmentButton { width: 74px; label: root.logic-ch2-enabled ? "ON" : "OFF"; selected: root.logic-ch2-enabled; activated => { root.logic-ch2-enabled = !root.logic-ch2-enabled; } }
+                    }
+                }
+
+                Rectangle {
+                    height: 39px; border-radius: 7px; background: #151f2e;
+                    HorizontalLayout {
+                        padding-left: 9px; padding-right: 7px; spacing: 8px;
+                        Text { width: 40px; text: "CH3"; color: #ffb84d; font-size: 11px; font-weight: 800; vertical-alignment: center; }
+                        Text { width: 135px; text: "IO10  P1.29 / R31.7"; color: #d5dfed; font-size: 9px; vertical-alignment: center; }
+                        Text { text: "DIR P2.20 / R30.12"; color: #71819a; font-size: 8px; vertical-alignment: center; }
+                        SegmentButton { width: 74px; label: root.logic-ch3-enabled ? "ON" : "OFF"; selected: root.logic-ch3-enabled; activated => { root.logic-ch3-enabled = !root.logic-ch3-enabled; } }
+                    }
+                }
+
+                Rectangle {
+                    height: 39px; border-radius: 7px; background: #151f2e;
+                    HorizontalLayout {
+                        padding-left: 9px; padding-right: 7px; spacing: 8px;
+                        Text { width: 40px; text: "CH4"; color: #b28cff; font-size: 11px; font-weight: 800; vertical-alignment: center; }
+                        Text { width: 135px; text: "IO11  P1.33 / R31.1"; color: #d5dfed; font-size: 9px; vertical-alignment: center; }
+                        Text { text: "DIR P1.31 / R30.4"; color: #71819a; font-size: 8px; vertical-alignment: center; }
+                        SegmentButton { width: 74px; label: root.logic-ch4-enabled ? "ON" : "OFF"; selected: root.logic-ch4-enabled; activated => { root.logic-ch4-enabled = !root.logic-ch4-enabled; } }
+                    }
+                }
+            }
+
+            if root.logic-menu-tab == 2: HorizontalLayout {
+                spacing: 9px;
+
+                VerticalLayout {
+                    spacing: 6px;
+
+                    Text { height: 13px; text: "TRIGGER TYPE"; color: #71819a; font-size: 8px; font-weight: 700; }
+                    HorizontalLayout {
+                        height: 34px; spacing: 4px;
+                        SegmentButton { label: "EDGE"; selected: root.logic-trigger-type == 0; activated => { root.logic-trigger-type = 0; } }
+                        SegmentButton { label: "LEVEL"; selected: root.logic-trigger-type == 1; activated => { root.logic-trigger-type = 1; } }
+                        SegmentButton { label: "PATTERN"; selected: root.logic-trigger-type == 2; activated => { root.logic-trigger-type = 2; } }
+                    }
+
+                    Text { height: 13px; text: root.logic-trigger-type == 2 ? "PATTERN MASK" : "SOURCE"; color: #71819a; font-size: 8px; font-weight: 700; }
+                    HorizontalLayout {
+                        height: 34px; spacing: 4px;
+                        SegmentButton {
+                            label: root.logic-trigger-type == 2 ? "CH1=" + (root.logic-pattern-ch1 == 0 ? "X" : root.logic-pattern-ch1 == 1 ? "0" : "1") : "CH1";
+                            selected: root.logic-trigger-type == 2 ? root.logic-pattern-ch1 != 0 : root.logic-trigger-source == 0;
+                            activated => { if root.logic-trigger-type == 2 { root.logic-pattern-ch1 = root.logic-pattern-ch1 == 2 ? 0 : root.logic-pattern-ch1 + 1; } else { root.logic-trigger-source = 0; } }
+                        }
+                        SegmentButton {
+                            label: root.logic-trigger-type == 2 ? "CH2=" + (root.logic-pattern-ch2 == 0 ? "X" : root.logic-pattern-ch2 == 1 ? "0" : "1") : "CH2";
+                            selected: root.logic-trigger-type == 2 ? root.logic-pattern-ch2 != 0 : root.logic-trigger-source == 1;
+                            activated => { if root.logic-trigger-type == 2 { root.logic-pattern-ch2 = root.logic-pattern-ch2 == 2 ? 0 : root.logic-pattern-ch2 + 1; } else { root.logic-trigger-source = 1; } }
+                        }
+                        SegmentButton {
+                            label: root.logic-trigger-type == 2 ? "CH3=" + (root.logic-pattern-ch3 == 0 ? "X" : root.logic-pattern-ch3 == 1 ? "0" : "1") : "CH3";
+                            selected: root.logic-trigger-type == 2 ? root.logic-pattern-ch3 != 0 : root.logic-trigger-source == 2;
+                            activated => { if root.logic-trigger-type == 2 { root.logic-pattern-ch3 = root.logic-pattern-ch3 == 2 ? 0 : root.logic-pattern-ch3 + 1; } else { root.logic-trigger-source = 2; } }
+                        }
+                        SegmentButton {
+                            label: root.logic-trigger-type == 2 ? "CH4=" + (root.logic-pattern-ch4 == 0 ? "X" : root.logic-pattern-ch4 == 1 ? "0" : "1") : "CH4";
+                            selected: root.logic-trigger-type == 2 ? root.logic-pattern-ch4 != 0 : root.logic-trigger-source == 3;
+                            activated => { if root.logic-trigger-type == 2 { root.logic-pattern-ch4 = root.logic-pattern-ch4 == 2 ? 0 : root.logic-pattern-ch4 + 1; } else { root.logic-trigger-source = 3; } }
+                        }
+                    }
+
+                    if root.logic-trigger-type != 2: VerticalLayout {
+                        spacing: 5px;
+                        Text { height: 13px; text: root.logic-trigger-type == 0 ? "EDGE" : "LEVEL"; color: #71819a; font-size: 8px; font-weight: 700; }
+                        HorizontalLayout {
+                            height: 34px; spacing: 4px;
+                            SegmentButton { label: root.logic-trigger-type == 0 ? "RISING" : "LOW"; selected: root.logic-trigger-edge == 0; activated => { root.logic-trigger-edge = 0; } }
+                            SegmentButton { label: root.logic-trigger-type == 0 ? "FALLING" : "HIGH"; selected: root.logic-trigger-edge == 1; activated => { root.logic-trigger-edge = 1; } }
+                            if root.logic-trigger-type == 0: SegmentButton { label: "EITHER"; selected: root.logic-trigger-edge == 2; activated => { root.logic-trigger-edge = 2; } }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 122px;
+                    border-radius: 8px;
+                    background: #151f2e;
+                    VerticalLayout {
+                        padding: 9px;
+                        spacing: 4px;
+                        Text { text: "ACTIVE TYPE"; color: #65758e; font-size: 8px; font-weight: 700; }
+                        Text { text: root.logic-trigger-text; color: #51d6a1; font-size: 15px; font-weight: 800; }
+                        Text { text: "Only this short type is shown on the waveform screen."; color: #8fa0b8; font-size: 8px; wrap: word-wrap; }
+                        Rectangle { vertical-stretch: 1; background: transparent; }
+                        PrimaryButton { label: "APPLY"; accent: #258e6a; activated => { root.logic-menu-open = false; } }
+                    }
+                }
+            }
+        }
+    }
+
+    if root.power-menu-open: Rectangle {
+        x: 0px; y: 0px; width: 100%; height: 100%;
+        background: #0a101a;
+
+        VerticalLayout {
+            padding: 12px;
+            spacing: 8px;
+
+            HorizontalLayout {
+                height: 32px;
+                Text { text: "POWER & MEASUREMENT"; color: #eef4fc; font-size: 13px; font-weight: 800; vertical-alignment: center; }
+                Rectangle { horizontal-stretch: 1; background: transparent; }
+                Rectangle {
+                    width: 36px; height: 30px; border-radius: 7px; background: power-close.pressed ? #35445d : #202c40;
+                    Text { text: "X"; color: #cbd7e8; font-size: 12px; font-weight: 750; horizontal-alignment: center; vertical-alignment: center; }
+                    power-close := TouchArea { clicked => { root.power-menu-open = false; } }
+                }
+            }
+
+            HorizontalLayout {
+                height: 34px; spacing: 5px;
+                SegmentButton { label: "SUPPLY"; selected: root.power-menu-tab == 0; activated => { root.power-menu-tab = 0; } }
+                SegmentButton { label: "METER"; selected: root.power-menu-tab == 1; activated => { root.power-menu-tab = 1; } }
+                SegmentButton { label: "VREF"; selected: root.power-menu-tab == 2; activated => { root.power-menu-tab = 2; } }
+            }
+
+            if root.power-menu-tab == 0: HorizontalLayout {
+                spacing: 9px;
+
+                VerticalLayout {
+                    spacing: 6px;
+                    Text { height: 14px; text: "OUTPUT VOLTAGE"; color: #71819a; font-size: 8px; font-weight: 700; }
+                    HorizontalLayout {
+                        height: 36px; spacing: 5px;
+                        SegmentButton { label: "3.30 V"; selected: root.power-voltage-text == "3.30 V"; activated => { root.power-voltage-text = "3.30 V"; } }
+                        SegmentButton { label: "5.00 V"; selected: root.power-voltage-text == "5.00 V"; activated => { root.power-voltage-text = "5.00 V"; } }
+                        SegmentButton { label: "12.00 V"; selected: root.power-voltage-text == "12.00 V"; activated => { root.power-voltage-text = "12.00 V"; } }
+                    }
+                    Text { height: 14px; text: "CURRENT LIMIT"; color: #71819a; font-size: 8px; font-weight: 700; }
+                    HorizontalLayout {
+                        height: 36px; spacing: 5px;
+                        SegmentButton { label: "100 mA"; selected: root.power-current-limit-text == "100 mA"; activated => { root.power-current-limit-text = "100 mA"; } }
+                        SegmentButton { label: "500 mA"; selected: root.power-current-limit-text == "500 mA"; activated => { root.power-current-limit-text = "500 mA"; } }
+                        SegmentButton { label: "1.00 A"; selected: root.power-current-limit-text == "1.00 A"; activated => { root.power-current-limit-text = "1.00 A"; } }
+                    }
+                    Rectangle { vertical-stretch: 1; background: transparent; }
+                    PrimaryButton { label: "APPLY SETTINGS"; activated => { root.power-settings-apply(); root.power-menu-open = false; } }
+                }
+
+                VerticalLayout {
+                    width: 180px; spacing: 6px;
+                    Text { height: 14px; text: "CONVERTER"; color: #71819a; font-size: 8px; font-weight: 700; }
+                    HorizontalLayout {
+                        height: 36px; spacing: 5px;
+                        SegmentButton { label: "OUTPUT OFF"; selected: !root.power-enabled; activated => { root.power-enabled = false; root.power-toggle(false); } }
+                        SegmentButton { label: "OUTPUT ON"; selected: root.power-enabled; activated => { root.power-enabled = true; root.power-toggle(true); } }
+                    }
+                    HorizontalLayout {
+                        height: 36px; spacing: 5px;
+                        SegmentButton { label: "PFM"; selected: !root.power-forced-pwm; activated => { root.power-forced-pwm = false; } }
+                        SegmentButton { label: "FPWM"; selected: root.power-forced-pwm; activated => { root.power-forced-pwm = true; } }
+                    }
+                    Rectangle {
+                        vertical-stretch: 1; border-radius: 8px; background: #151f2e;
+                        VerticalLayout { padding: 9px; spacing: 2px;
+                            Text { text: "LIVE CURRENT"; color: #65758e; font-size: 8px; font-weight: 700; }
+                            Text { text: root.power-current-text; color: #51d6a1; font-size: 19px; font-weight: 800; }
+                            Text { text: "LIMIT " + root.power-current-limit-text; color: #8fa0b8; font-size: 8px; }
+                        }
+                    }
+                }
+            }
+
+            if root.power-menu-tab == 1: VerticalLayout {
+                spacing: 7px;
+
+                HorizontalLayout {
+                    height: 48px;
+                    spacing: 6px;
+
+                    StatCard { caption: "OUTPUT CURRENT"; value: root.power-current-text; accent: #51d6a1; }
+                    StatCard { caption: "SHUNT VOLTAGE"; value: root.power-shunt-text; accent: #75a7ff; }
+                    Rectangle {
+                        width: 112px;
+                        border-radius: 7px;
+                        background: #151f2e;
+                        VerticalLayout {
+                            padding: 6px;
+                            spacing: 1px;
+                            Text { text: "AUTO RANGE"; color: #65758e; font-size: 8px; font-weight: 700; }
+                            Text { text: root.meter-high-resolution ? "HI-RES" : "WIDE"; color: #ffb84d; font-size: 13px; font-weight: 800; }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    vertical-stretch: 1;
+                    border-radius: 8px;
+                    clip: true;
+                    background: #111a28;
+                    border-width: 1px;
+                    border-color: #2a3850;
+
+                    Rectangle { x: 0px; y: 35px; width: 100%; height: 1px; background: #263247; }
+                    Rectangle { x: 0px; y: 70px; width: 100%; height: 1px; background: #334159; }
+                    Rectangle { x: 0px; y: 105px; width: 100%; height: 1px; background: #263247; }
+                    Rectangle { x: 90px; y: 0px; width: 1px; height: 100%; background: #263247; }
+                    Rectangle { x: 180px; y: 0px; width: 1px; height: 100%; background: #263247; }
+                    Rectangle { x: 270px; y: 0px; width: 1px; height: 100%; background: #263247; }
+                    Rectangle { x: 360px; y: 0px; width: 1px; height: 100%; background: #263247; }
+
+                    Rectangle { x: 8px; y: 79px; width: 12px; height: 10px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 27px; y: 76px; width: 12px; height: 16px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 46px; y: 72px; width: 12px; height: 24px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 65px; y: 68px; width: 12px; height: 32px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 84px; y: 63px; width: 12px; height: 42px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 103px; y: 58px; width: 12px; height: 52px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 122px; y: 55px; width: 12px; height: 58px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 141px; y: 61px; width: 12px; height: 46px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 160px; y: 66px; width: 12px; height: 36px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 179px; y: 70px; width: 12px; height: 28px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 198px; y: 72px; width: 12px; height: 24px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 217px; y: 69px; width: 12px; height: 30px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 236px; y: 65px; width: 12px; height: 38px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 255px; y: 59px; width: 12px; height: 50px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 274px; y: 52px; width: 12px; height: 64px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 293px; y: 57px; width: 12px; height: 54px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 312px; y: 63px; width: 12px; height: 42px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 331px; y: 67px; width: 12px; height: 34px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 350px; y: 70px; width: 12px; height: 28px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 369px; y: 65px; width: 12px; height: 38px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 388px; y: 60px; width: 12px; height: 48px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 407px; y: 56px; width: 12px; height: 56px; border-radius: 2px; background: #51d6a1; }
+                    Rectangle { x: 426px; y: 62px; width: 12px; height: 44px; border-radius: 2px; background: #51d6a1; }
+
+                    Text { x: 8px; y: 5px; text: "CURRENT HISTORY"; color: #65758e; font-size: 8px; font-weight: 700; }
+                    Text { x: 398px; y: 5px; text: "2 s"; color: #65758e; font-size: 8px; }
+                }
+            }
+
+            if root.power-menu-tab == 2: HorizontalLayout {
+                spacing: 9px;
+                Rectangle {
+                    width: 210px; border-radius: 9px; background: #151f2e;
+                    VerticalLayout { padding: 12px; spacing: 5px;
+                        Text { text: "MEASURED VREF"; color: #65758e; font-size: 8px; font-weight: 700; }
+                        Text { text: root.power-vref-text; color: #75a7ff; font-size: 26px; font-weight: 800; }
+                        Text { text: "AUX RAW: " + root.power-aux-text; color: #8fa0b8; font-size: 9px; }
+                        Text { text: "DIVIDER: x2.000"; color: #8fa0b8; font-size: 9px; }
+                    }
+                }
+                VerticalLayout {
+                    spacing: 7px;
+                    Text { height: 14px; text: "VREF LINK SWITCH"; color: #71819a; font-size: 8px; font-weight: 700; }
+                    HorizontalLayout {
+                        height: 40px; spacing: 5px;
+                        SegmentButton { label: "DISCONNECT"; selected: !root.vref-link-enabled; activated => { root.vref-link-enabled = false; root.vref-link-toggle(false); } }
+                        SegmentButton { label: "CONNECT"; selected: root.vref-link-enabled; activated => { root.vref-link-enabled = true; root.vref-link-toggle(true); } }
+                    }
+                    Rectangle {
+                        vertical-stretch: 1; border-radius: 8px; background: #2b2218; border-width: 1px; border-color: #5c4526;
+                        Text { text: "Check voltage difference before closing the VREF switch."; color: #ffcc7a; font-size: 9px; wrap: word-wrap; horizontal-alignment: center; vertical-alignment: center; }
+                    }
+                    PrimaryButton { label: "DONE"; accent: #41506a; activated => { root.power-menu-open = false; } }
+                }
+            }
+        }
+    }
+
+    if root.program-menu-open: Rectangle {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+        background: #0a101a;
+
+        VerticalLayout {
+            padding: 12px;
+            spacing: 8px;
+
+            HorizontalLayout {
+                height: 32px;
+                spacing: 8px;
+
+                VerticalLayout {
+                    spacing: 0px;
+
+                    Text {
+                        text: "PROGRAMMER SETUP";
+                        color: #eef4fc;
+                        font-size: 13px;
+                        font-weight: 800;
+                    }
+
+                    Text {
+                        text: "OpenOCD catalog and firmware image";
+                        color: #71819a;
+                        font-size: 8px;
+                    }
+                }
+
+                Rectangle { horizontal-stretch: 1; background: transparent; }
+
+                Rectangle {
+                    width: 36px;
+                    height: 30px;
+                    border-radius: 7px;
+                    background: setup-close-touch.pressed ? #35445d : #202c40;
+
+                    Text {
+                        text: "X";
+                        color: #cbd7e8;
+                        font-size: 12px;
+                        font-weight: 750;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    setup-close-touch := TouchArea {
+                        clicked => { root.program-menu-open = false; }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                height: 34px;
+                spacing: 5px;
+
+                SegmentButton {
+                    label: "MCU";
+                    selected: root.program-menu-tab == 0;
+                    activated => { root.program-menu-tab = 0; }
+                }
+
+                SegmentButton {
+                    label: "PROFILE";
+                    selected: root.program-menu-tab == 1;
+                    activated => { root.program-menu-tab = 1; }
+                }
+
+                SegmentButton {
+                    label: "HEX FILE";
+                    selected: root.program-menu-tab == 2;
+                    activated => { root.program-menu-tab = 2; }
+                }
+
+                SegmentButton {
+                    label: "ACTION";
+                    selected: root.program-menu-tab == 3;
+                    activated => { root.program-menu-tab = 3; }
+                }
+            }
+
+            if root.program-menu-tab == 0: HorizontalLayout {
+                spacing: 8px;
+
+                VerticalLayout {
+                    spacing: 6px;
+
+                    Text {
+                        height: 15px;
+                        text: "MCU / OPENOCD TARGET";
+                        color: #71819a;
+                        font-size: 8px;
+                        font-weight: 700;
+                    }
+
+                    ListView {
+                        for item in root.mcu-configs: ConfigOption {
+                            title: item.name;
+                            detail: item.path;
+                            selected: root.selected-profile == item.path;
+                            activated => {
+                                root.selected-mcu = item.name;
+                                root.selected-profile = item.path;
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 145px;
+                    border-radius: 8px;
+                    background: #151f2e;
+
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 6px;
+
+                        Text {
+                            text: "SOURCE";
+                            color: #65758e;
+                            font-size: 8px;
+                            font-weight: 700;
+                        }
+
+                        Text {
+                            text: "/usr/share/openocd/scripts/target";
+                            color: #75a7ff;
+                            font-size: 9px;
+                            wrap: word-wrap;
+                        }
+
+                        Rectangle { vertical-stretch: 1; background: transparent; }
+
+                        SmallButton {
+                            label: "RESCAN CONFIGS";
+                            activated => { root.reload-openocd-configs(); }
+                        }
+                    }
+                }
+            }
+
+            if root.program-menu-tab == 1: VerticalLayout {
+                spacing: 6px;
+
+                Text {
+                    height: 15px;
+                    text: "OPENOCD CONFIG PROFILE";
+                    color: #71819a;
+                    font-size: 8px;
+                    font-weight: 700;
+                }
+
+                ListView {
+                    for item in root.profile-configs: ConfigOption {
+                        title: item.name;
+                        detail: item.path;
+                        selected: root.selected-profile == item.path;
+                        activated => { root.selected-profile = item.path; }
+                    }
+                }
+
+                Text {
+                    height: 15px;
+                    text: "Interface: interface/pb2-multitool.cfg";
+                    color: #65758e;
+                    font-size: 8px;
+                }
+            }
+
+            if root.program-menu-tab == 2: HorizontalLayout {
+                spacing: 8px;
+
+                VerticalLayout {
+                    spacing: 6px;
+
+                    Text {
+                        height: 15px;
+                        text: root.read-operation ? "OUTPUT INTEL HEX" : "INPUT INTEL HEX";
+                        color: #71819a;
+                        font-size: 8px;
+                        font-weight: 700;
+                    }
+
+                    ListView {
+                        for item in root.hex-files: ConfigOption {
+                            title: item.name;
+                            detail: item.path;
+                            selected: root.selected-image == item.path;
+                            accent: #ffb84d;
+                            activated => { root.selected-image = item.path; }
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    width: 145px;
+                    spacing: 7px;
+
+                    SelectorRow {
+                        caption: root.read-operation ? "WRITE RESULT TO" : "SELECTED IMAGE";
+                        value: root.selected-image;
+                        accent: #ffb84d;
+                    }
+
+                    SmallButton {
+                        label: "RESCAN USB / SD";
+                        activated => { root.browse-image(); }
+                    }
+
+                    Rectangle { vertical-stretch: 1; background: transparent; }
+
+                    Text {
+                        text: root.read-operation ? "Read operation creates Intel HEX" : "Only .hex files are displayed";
+                        color: #71819a;
+                        font-size: 8px;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+
+            if root.program-menu-tab == 3: HorizontalLayout {
+                spacing: 10px;
+
+                VerticalLayout {
+                    width: 190px;
+                    spacing: 7px;
+
+                    Text {
+                        height: 15px;
+                        text: "OPERATION";
+                        color: #71819a;
+                        font-size: 8px;
+                        font-weight: 700;
+                    }
+
+                    SegmentButton {
+                        label: "PROGRAM + VERIFY";
+                        selected: !root.read-operation;
+                        activated => { root.read-operation = false; }
+                    }
+
+                    SegmentButton {
+                        label: "READ FLASH TO HEX";
+                        selected: root.read-operation;
+                        activated => { root.read-operation = true; }
+                    }
+                }
+
+                Rectangle {
+                    border-radius: 8px;
+                    background: #151f2e;
+
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 4px;
+
+                        Text { text: "SUMMARY"; color: #65758e; font-size: 8px; font-weight: 700; }
+                        Text { text: root.selected-mcu; color: #eef4fc; font-size: 12px; font-weight: 700; }
+                        Text { text: root.selected-profile; color: #75a7ff; font-size: 9px; overflow: elide; }
+                        Text { text: root.selected-image; color: #ffb84d; font-size: 9px; overflow: elide; }
+                        Rectangle { vertical-stretch: 1; background: transparent; }
+
+                        PrimaryButton {
+                            label: "APPLY";
+                            activated => {
+                                root.openocd-config-apply(root.selected-profile, root.swd-mode);
+                                root.program-menu-open = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if root.mode-menu-open: Rectangle {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+        background: #0a101a;
+
+        VerticalLayout {
+            padding: 14px;
+            spacing: 10px;
+
+            HorizontalLayout {
+                height: 34px;
+                spacing: 8px;
+
+                Rectangle {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 7px;
+                    background: #3978f6;
+
+                    Text {
+                        text: "M";
+                        color: #ffffff;
+                        font-size: 15px;
+                        font-weight: 800;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 0px;
+
+                    Text {
+                        text: "SELECT OPERATING MODE";
+                        color: #eef4fc;
+                        font-size: 13px;
+                        font-weight: 800;
+                    }
+
+                    Text {
+                        text: "Only one role per PRU core";
+                        color: #71819a;
+                        font-size: 9px;
+                    }
+                }
+
+                Rectangle { horizontal-stretch: 1; background: transparent; }
+
+                Rectangle {
+                    width: 36px;
+                    height: 32px;
+                    border-radius: 7px;
+                    background: close-touch.pressed ? #35445d : #202c40;
+
+                    Text {
+                        text: "X";
+                        color: #cbd7e8;
+                        font-size: 12px;
+                        font-weight: 750;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    close-touch := TouchArea {
+                        clicked => { root.mode-menu-open = false; }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 9px;
+
+                ModeChoice {
+                    glyph: "P";
+                    title: "PROGRAMMER";
+                    subtitle: "SWD / JTAG";
+                    accent: #75a7ff;
+                    selected: root.page == 0;
+                    activated => {
+                        root.page = 0;
+                        root.mode-menu-open = false;
+                    }
+                }
+
+                ModeChoice {
+                    glyph: "L";
+                    title: "LOGIC";
+                    subtitle: "4-channel capture";
+                    accent: #51d6a1;
+                    selected: root.page == 1;
+                    activated => {
+                        root.page = 1;
+                        root.mode-menu-open = false;
+                    }
+                }
+
+                ModeChoice {
+                    glyph: "S";
+                    title: "SCOPE";
+                    subtitle: "SPI ADC waveform";
+                    accent: #ffb84d;
+                    selected: root.page == 2;
+                    activated => {
+                        root.page = 2;
+                        root.mode-menu-open = false;
+                    }
+                }
+            }
+
+            Text {
+                height: 17px;
+                text: "Tap a mode to switch";
+                color: #65758e;
+                font-size: 9px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

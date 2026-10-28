@@ -1,0 +1,26 @@
+# LCDWiki MSP4031 / ST7796S MIPI-DBI initialization
+# Source: LCDWiki ST7796_Init.txt and MSP4031 official example package.
+# Format below: command followed by parameters; "delay" is milliseconds.
+F0 C3
+F0 96
+36 48
+3A 05
+B0 80
+B6 00 02
+B5 02 03 00 04
+B1 80 10
+B4 00
+B7 C6
+C5 1C
+E4 31
+E8 40 8A 00 00 29 19 A5 33
+C2
+A7
+E0 F0 09 13 12 12 2B 3C 44 4B 1B 18 17 1D 21
+E1 F0 09 13 0C 0D 27 3B 44 4D 0B 17 17 1D 21
+F0 3C
+F0 69
+13
+11
+delay 120
+29

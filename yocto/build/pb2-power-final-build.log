@@ -1,0 +1,163 @@
+Loading cache...done.
+Loaded 6708 entries from dependency cache.
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+
+Build Configuration (mc:default):
+BB_VERSION           = "2.8.1"
+BUILD_SYS            = "x86_64-linux"
+NATIVELSBSTRING      = "universal"
+TARGET_SYS           = "aarch64-poky-linux"
+MACHINE              = "pocketbeagle2"
+DISTRO               = "pb2-fast"
+DISTRO_VERSION       = "1.0"
+TUNE_FEATURES        = "aarch64"
+TARGET_FPU           = ""
+meta                 
+meta-poky            = "scarthgap:4fb7016a07507683359ebd620f1951fd5ea44bfa"
+meta-oe              = "scarthgap:0f00f8b9a21950640da8c5707343e5540133f86e"
+meta-arm-toolchain   
+meta-arm             = "scarthgap:0a4b911d9fd63ab29c4532a907fae3282dbdcfe4"
+meta-ti-bsp          
+meta-beagle          = "scarthgap:a28461e373c3b7c05d7eddb5067a114babcf5537"
+meta-pb2             = "main:bfcd3a437397d3430000722b5195b0a9a787d330"
+
+
+Build Configuration:
+BB_VERSION           = "2.8.1"
+BUILD_SYS            = "x86_64-linux"
+NATIVELSBSTRING      = "universal"
+TARGET_SYS           = "arm-poky-eabi"
+MACHINE              = "pocketbeagle2-k3r5"
+DISTRO               = "pb2-fast"
+DISTRO_VERSION       = "1.0"
+TUNE_FEATURES        = "arm armv7a vfp thumb callconvention-hard"
+TARGET_FPU           = "hard"
+meta                 
+meta-poky            = "scarthgap:4fb7016a07507683359ebd620f1951fd5ea44bfa"
+meta-oe              = "scarthgap:0f00f8b9a21950640da8c5707343e5540133f86e"
+meta-arm-toolchain   
+meta-arm             = "scarthgap:0a4b911d9fd63ab29c4532a907fae3282dbdcfe4"
+meta-ti-bsp          
+meta-beagle          = "scarthgap:a28461e373c3b7c05d7eddb5067a114babcf5537"
+meta-pb2             = "main:bfcd3a437397d3430000722b5195b0a9a787d330"
+
+Initialising tasks...Sstate summary: Wanted 132 Local 121 Mirrors 0 Missed 11 Current 1314 (91% match, 99% complete)
+Removing 2 stale sstate objects for arch pocketbeagle2...done.
+NOTE: Executing Tasks
+NOTE: Running task 1091 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_fetch)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_fetch: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_fetch: Succeeded
+NOTE: Running task 1301 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_unpack)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_unpack: Started
+NOTE: Running task 1636 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_prepare_recipe_sysroot)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_prepare_recipe_sysroot: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_prepare_recipe_sysroot: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_unpack: Succeeded
+NOTE: Running task 3725 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_symlink_kernsrc)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_symlink_kernsrc: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_symlink_kernsrc: Succeeded
+NOTE: Running task 3726 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_patch)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_patch: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_patch: Succeeded
+NOTE: Running task 3727 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_deploy_source_date_epoch)
+NOTE: Running task 3728 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_populate_lic)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_deploy_source_date_epoch: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_populate_lic: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_populate_lic: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_deploy_source_date_epoch: Succeeded
+NOTE: Running task 3729 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_configure)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_configure: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_configure: Succeeded
+NOTE: Running task 3730 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_compile)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_compile: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_compile: Succeeded
+NOTE: Running task 3731 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_shared_workdir)
+NOTE: Running task 3732 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_kernel_link_images)
+NOTE: Running task 3733 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_kernel_generate_rsa_keys)
+NOTE: Running task 3734 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_transform_kernel)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_shared_workdir: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_kernel_link_images: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_kernel_generate_rsa_keys: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_transform_kernel: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_kernel_link_images: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_kernel_generate_rsa_keys: Succeeded
+NOTE: Running task 3735 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_assemble_fitimage)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_shared_workdir: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_transform_kernel: Succeeded
+NOTE: Running task 3736 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_compile_kernelmodules)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_assemble_fitimage: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_compile_kernelmodules: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_assemble_fitimage: Succeeded
+Bitbake still alive (no events for 600s). Active tasks:
+/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_compile_kernelmodules
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_compile_kernelmodules: Succeeded
+NOTE: Running task 3737 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_strip)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_strip: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_strip: Succeeded
+NOTE: Running task 3738 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_sizecheck)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_sizecheck: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_sizecheck: Succeeded
+NOTE: Running task 3739 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_install)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_install: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_install: Succeeded
+NOTE: Running task 3740 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_package)
+NOTE: Running task 3741 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_bundle_initramfs)
+NOTE: Running task 3742 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_populate_sysroot)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_bundle_initramfs: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_populate_sysroot: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_package: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_bundle_initramfs: Succeeded
+NOTE: Running task 3743 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_assemble_fitimage_initramfs)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_assemble_fitimage_initramfs: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_assemble_fitimage_initramfs: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_populate_sysroot: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_package: Succeeded
+NOTE: Running task 3744 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_packagedata)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_packagedata: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_packagedata: Succeeded
+NOTE: Running task 3745 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_package_write_ipk)
+NOTE: Running task 3746 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_package_qa)
+NOTE: Running task 3747 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_deploy)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_deploy: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_package_write_ipk: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_package_qa: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_deploy: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_package_qa: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_package_write_ipk: Succeeded
+NOTE: Running task 3748 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_rootfs)
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_rootfs: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_rootfs: Succeeded
+NOTE: Running task 3749 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_flush_pseudodb)
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_flush_pseudodb: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_flush_pseudodb: Succeeded
+NOTE: Running task 3750 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_image_qa)
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image_qa: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image_qa: Succeeded
+NOTE: Running task 3751 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_image)
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image: Succeeded
+NOTE: Running task 3752 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_write_wks_template)
+NOTE: Running task 3753 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_rootfs_wicenv)
+NOTE: Running task 3754 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_image_tar)
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_write_wks_template: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_write_wks_template: Succeeded
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_rootfs_wicenv: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_rootfs_wicenv: Succeeded
+NOTE: Running task 3755 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_image_wic)
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image_tar: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image_wic: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image_tar: Succeeded
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image_wic: Succeeded
+NOTE: Running task 3756 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_image_complete)
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image_complete: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_image_complete: Succeeded
+NOTE: Running task 3757 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_populate_lic_deploy)
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_populate_lic_deploy: Started
+NOTE: recipe pb2-image-minimal-1.0-r0: task do_populate_lic_deploy: Succeeded
+NOTE: Running noexec task 3758 of 3758 (/home/dimka/PB2_multitool/yocto/build/../meta-pb2/recipes-core/images/pb2-image-minimal.bb:do_build)
+NOTE: Tasks Summary: Attempted 3758 tasks of which 3721 didn't need to be rerun and all succeeded.

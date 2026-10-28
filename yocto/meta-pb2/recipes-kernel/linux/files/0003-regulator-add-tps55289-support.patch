@@ -1,0 +1,567 @@
+From 452a57d50c4268fe7c841f1c4eb3ebdc08f28e89 Mon Sep 17 00:00:00 2001
+From: PB2 Multitool <pb2-multitool@local>
+Date: Thu, 8 Oct 2026 15:30:00 +0000
+Subject: [PATCH] regulator: add TI TPS55289 buck-boost support
+
+Add a regulator driver for the I2C-controlled TPS55289. Support the
+internal-feedback 0.8-20 V range, enable, active discharge, slew rate,
+PFM/FPWM selection and the shunt-dependent output current limit. Also
+provide small writable device attributes for direct board bring-up.
+
+Signed-off-by: PB2 Multitool <pb2-multitool@local>
+---
+--- a/drivers/regulator/Kconfig
++++ b/drivers/regulator/Kconfig
+@@ -1518,6 +1518,18 @@
+ 
+ 	  If built as a module it will be called tps6287x-regulator.
+ 
++config REGULATOR_TPS55289
++	tristate "TI TPS55289 buck-boost regulator"
++	depends on I2C && OF
++	select REGMAP_I2C
++	help
++	  This driver supports the Texas Instruments TPS55289 synchronous
++	  buck-boost converter with an I2C control interface. It provides
++	  voltage, current-limit, mode, slew-rate and output-enable control
++	  through the regulator subsystem.
++
++	  If built as a module it will be called tps55289-regulator.
++
+ config REGULATOR_TPS65023
+ 	tristate "TI TPS65023 Power regulators"
+ 	depends on I2C
+--- a/drivers/regulator/Makefile
++++ b/drivers/regulator/Makefile
+@@ -175,6 +175,7 @@
+ obj-$(CONFIG_REGULATOR_TPS62360) += tps62360-regulator.o
+ obj-$(CONFIG_REGULATOR_TPS6286X) += tps6286x-regulator.o
+ obj-$(CONFIG_REGULATOR_TPS6287X) += tps6287x-regulator.o
++obj-$(CONFIG_REGULATOR_TPS55289) += tps55289-regulator.o
+ obj-$(CONFIG_REGULATOR_TPS65023) += tps65023-regulator.o
+ obj-$(CONFIG_REGULATOR_TPS6507X) += tps6507x-regulator.o
+ obj-$(CONFIG_REGULATOR_TPS65086) += tps65086-regulator.o
+--- /dev/null
++++ b/drivers/regulator/tps55289-regulator.c
+@@ -0,0 +1,460 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Regulator driver for Texas Instruments TPS55289 buck-boost converter
++ *
++ * The device uses the internal 0.0564 feedback ratio, giving an output
++ * range of 0.8 V to 20 V in 10 mV steps.
++ */
++
++#include <linux/bitfield.h>
++#include <linux/i2c.h>
++#include <linux/module.h>
++#include <linux/property.h>
++#include <linux/regmap.h>
++#include <linux/regulator/driver.h>
++#include <linux/regulator/machine.h>
++#include <linux/regulator/of_regulator.h>
++
++#define TPS55289_REG_REF_LSB		0x00
++#define TPS55289_REG_REF_MSB		0x01
++#define TPS55289_REG_IOUT_LIMIT		0x02
++#define TPS55289_REG_VOUT_SR		0x03
++#define TPS55289_REG_VOUT_FS		0x04
++#define TPS55289_REG_MODE		0x06
++#define TPS55289_REG_STATUS		0x07
++
++#define TPS55289_REF_MASK		GENMASK(10, 0)
++#define TPS55289_IOUT_LIMIT_EN		BIT(7)
++#define TPS55289_IOUT_LIMIT_MASK	GENMASK(6, 0)
++#define TPS55289_VOUT_FS_FB		BIT(7)
++#define TPS55289_VOUT_FS_INTFB_MASK	GENMASK(1, 0)
++#define TPS55289_VOUT_FS_INTFB_20V	FIELD_PREP(TPS55289_VOUT_FS_INTFB_MASK, 3)
++#define TPS55289_MODE_OE		BIT(7)
++#define TPS55289_MODE_DISCHG		BIT(4)
++#define TPS55289_MODE_FPWM		BIT(1)
++
++#define TPS55289_MIN_UV		800000
++#define TPS55289_STEP_UV		10000
++#define TPS55289_MAX_UV		20000000
++#define TPS55289_N_VOLTAGES		(((TPS55289_MAX_UV - TPS55289_MIN_UV) / \
++					  TPS55289_STEP_UV) + 1)
++#define TPS55289_DEFAULT_RSENSE_UOHM	100000
++#define TPS55289_ILIM_STEP_UV		500
++
++struct tps55289_data {
++	struct regmap *regmap;
++	unsigned int current_step_ua;
++};
++
++static const struct regmap_config tps55289_regmap_config = {
++	.reg_bits = 8,
++	.val_bits = 8,
++	.max_register = TPS55289_REG_STATUS,
++};
++
++static int tps55289_get_voltage_sel(struct regulator_dev *rdev)
++{
++	struct tps55289_data *data = rdev_get_drvdata(rdev);
++	u8 ref[2];
++	int ret;
++
++	ret = regmap_bulk_read(data->regmap, TPS55289_REG_REF_LSB,
++			       ref, sizeof(ref));
++	if (ret)
++		return ret;
++
++	return ((ref[1] << 8) | ref[0]) & TPS55289_REF_MASK;
++}
++
++static int tps55289_set_voltage_sel(struct regulator_dev *rdev,
++				    unsigned int selector)
++{
++	struct tps55289_data *data = rdev_get_drvdata(rdev);
++	u8 ref[2];
++
++	if (selector >= TPS55289_N_VOLTAGES)
++		return -EINVAL;
++
++	/* The data sheet requires REF_LSB to be written before REF_MSB. */
++	ref[0] = selector;
++	ref[1] = selector >> 8;
++
++	return regmap_bulk_write(data->regmap, TPS55289_REG_REF_LSB,
++				 ref, sizeof(ref));
++}
++
++static int tps55289_get_current_limit(struct regulator_dev *rdev)
++{
++	struct tps55289_data *data = rdev_get_drvdata(rdev);
++	unsigned int value;
++	int ret;
++
++	ret = regmap_read(data->regmap, TPS55289_REG_IOUT_LIMIT, &value);
++	if (ret)
++		return ret;
++	if (!(value & TPS55289_IOUT_LIMIT_EN))
++		return 0;
++
++	return FIELD_GET(TPS55289_IOUT_LIMIT_MASK, value) *
++	       data->current_step_ua;
++}
++
++static int tps55289_set_current_limit(struct regulator_dev *rdev,
++				      int min_ua, int max_ua)
++{
++	struct tps55289_data *data = rdev_get_drvdata(rdev);
++	unsigned int selector;
++
++	selector = DIV_ROUND_UP(min_ua, data->current_step_ua);
++	if (selector > FIELD_MAX(TPS55289_IOUT_LIMIT_MASK) ||
++	    selector * data->current_step_ua > max_ua)
++		return -EINVAL;
++
++	return regmap_write(data->regmap, TPS55289_REG_IOUT_LIMIT,
++			    TPS55289_IOUT_LIMIT_EN |
++			    FIELD_PREP(TPS55289_IOUT_LIMIT_MASK, selector));
++}
++
++static int tps55289_set_mode(struct regulator_dev *rdev, unsigned int mode)
++{
++	struct tps55289_data *data = rdev_get_drvdata(rdev);
++	unsigned int value;
++
++	switch (mode) {
++	case REGULATOR_MODE_NORMAL:
++		value = 0;
++		break;
++	case REGULATOR_MODE_FAST:
++		value = TPS55289_MODE_FPWM;
++		break;
++	default:
++		return -EINVAL;
++	}
++
++	return regmap_update_bits(data->regmap, TPS55289_REG_MODE,
++				  TPS55289_MODE_FPWM, value);
++}
++
++static unsigned int tps55289_get_mode(struct regulator_dev *rdev)
++{
++	struct tps55289_data *data = rdev_get_drvdata(rdev);
++	unsigned int value;
++	int ret;
++
++	ret = regmap_read(data->regmap, TPS55289_REG_MODE, &value);
++	if (ret)
++		return REGULATOR_MODE_INVALID;
++
++	return value & TPS55289_MODE_FPWM ? REGULATOR_MODE_FAST :
++					       REGULATOR_MODE_NORMAL;
++}
++
++static unsigned int tps55289_of_map_mode(unsigned int mode)
++{
++	switch (mode) {
++	case REGULATOR_MODE_NORMAL:
++	case REGULATOR_MODE_FAST:
++		return mode;
++	default:
++		return REGULATOR_MODE_INVALID;
++	}
++}
++
++static const unsigned int tps55289_ramp_table[] = {
++	1250, 2500, 5000, 10000,
++};
++
++static const struct regulator_ops tps55289_ops = {
++	.enable = regulator_enable_regmap,
++	.disable = regulator_disable_regmap,
++	.is_enabled = regulator_is_enabled_regmap,
++	.list_voltage = regulator_list_voltage_linear,
++	.map_voltage = regulator_map_voltage_linear,
++	.get_voltage_sel = tps55289_get_voltage_sel,
++	.set_voltage_sel = tps55289_set_voltage_sel,
++	.get_current_limit = tps55289_get_current_limit,
++	.set_current_limit = tps55289_set_current_limit,
++	.set_mode = tps55289_set_mode,
++	.get_mode = tps55289_get_mode,
++	.set_active_discharge = regulator_set_active_discharge_regmap,
++	.set_ramp_delay = regulator_set_ramp_delay_regmap,
++};
++
++static const struct regulator_desc tps55289_desc = {
++	.name = "tps55289-vout",
++	.of_match = "vout",
++	.owner = THIS_MODULE,
++	.ops = &tps55289_ops,
++	.of_map_mode = tps55289_of_map_mode,
++	.type = REGULATOR_VOLTAGE,
++	.min_uV = TPS55289_MIN_UV,
++	.uV_step = TPS55289_STEP_UV,
++	.n_voltages = TPS55289_N_VOLTAGES,
++	.enable_reg = TPS55289_REG_MODE,
++	.enable_mask = TPS55289_MODE_OE,
++	.active_discharge_reg = TPS55289_REG_MODE,
++	.active_discharge_mask = TPS55289_MODE_DISCHG,
++	.active_discharge_on = TPS55289_MODE_DISCHG,
++	.active_discharge_off = 0,
++	.ramp_reg = TPS55289_REG_VOUT_SR,
++	.ramp_mask = GENMASK(1, 0),
++	.ramp_delay_table = tps55289_ramp_table,
++	.n_ramp_values = ARRAY_SIZE(tps55289_ramp_table),
++	.enable_time = 3600,
++};
++
++static ssize_t output_voltage_mv_show(struct device *dev,
++				      struct device_attribute *attr, char *buf)
++{
++	struct tps55289_data *data = dev_get_drvdata(dev);
++	u8 ref[2];
++	unsigned int selector;
++	int ret;
++
++	ret = regmap_bulk_read(data->regmap, TPS55289_REG_REF_LSB,
++			       ref, sizeof(ref));
++	if (ret)
++		return ret;
++	selector = ((ref[1] << 8) | ref[0]) & TPS55289_REF_MASK;
++
++	return sysfs_emit(buf, "%u\n",
++			  (TPS55289_MIN_UV + selector * TPS55289_STEP_UV) / 1000);
++}
++
++static ssize_t output_voltage_mv_store(struct device *dev,
++				       struct device_attribute *attr,
++				       const char *buf, size_t count)
++{
++	struct tps55289_data *data = dev_get_drvdata(dev);
++	unsigned int mv;
++	unsigned int selector;
++	u8 ref[2];
++	int ret;
++
++	ret = kstrtouint(buf, 0, &mv);
++	if (ret)
++		return ret;
++	if (mv < TPS55289_MIN_UV / 1000 || mv > TPS55289_MAX_UV / 1000 ||
++	    (mv - TPS55289_MIN_UV / 1000) % (TPS55289_STEP_UV / 1000))
++		return -EINVAL;
++
++	selector = (mv - TPS55289_MIN_UV / 1000) /
++		   (TPS55289_STEP_UV / 1000);
++	ref[0] = selector;
++	ref[1] = selector >> 8;
++	ret = regmap_bulk_write(data->regmap, TPS55289_REG_REF_LSB,
++				ref, sizeof(ref));
++
++	return ret ? ret : count;
++}
++static DEVICE_ATTR_RW(output_voltage_mv);
++
++static ssize_t output_enable_show(struct device *dev,
++				  struct device_attribute *attr, char *buf)
++{
++	struct tps55289_data *data = dev_get_drvdata(dev);
++	unsigned int value;
++	int ret;
++
++	ret = regmap_read(data->regmap, TPS55289_REG_MODE, &value);
++	if (ret)
++		return ret;
++
++	return sysfs_emit(buf, "%u\n", !!(value & TPS55289_MODE_OE));
++}
++
++static ssize_t output_enable_store(struct device *dev,
++				   struct device_attribute *attr,
++				   const char *buf, size_t count)
++{
++	struct tps55289_data *data = dev_get_drvdata(dev);
++	bool enable;
++	int ret;
++
++	ret = kstrtobool(buf, &enable);
++	if (ret)
++		return ret;
++	ret = regmap_update_bits(data->regmap, TPS55289_REG_MODE,
++				 TPS55289_MODE_OE,
++				 enable ? TPS55289_MODE_OE : 0);
++
++	return ret ? ret : count;
++}
++static DEVICE_ATTR_RW(output_enable);
++
++static ssize_t current_limit_ma_show(struct device *dev,
++				     struct device_attribute *attr, char *buf)
++{
++	struct tps55289_data *data = dev_get_drvdata(dev);
++	unsigned int value;
++	unsigned int ua;
++	int ret;
++
++	ret = regmap_read(data->regmap, TPS55289_REG_IOUT_LIMIT, &value);
++	if (ret)
++		return ret;
++	ua = value & TPS55289_IOUT_LIMIT_EN ?
++	     FIELD_GET(TPS55289_IOUT_LIMIT_MASK, value) *
++	     data->current_step_ua : 0;
++
++	return sysfs_emit(buf, "%u\n", ua / 1000);
++}
++
++static ssize_t current_limit_ma_store(struct device *dev,
++				      struct device_attribute *attr,
++				      const char *buf, size_t count)
++{
++	struct tps55289_data *data = dev_get_drvdata(dev);
++	unsigned int selector;
++	unsigned int ma;
++	unsigned int ua;
++	int ret;
++
++	ret = kstrtouint(buf, 0, &ma);
++	if (ret)
++		return ret;
++	if (!ma) {
++		ret = regmap_update_bits(data->regmap, TPS55289_REG_IOUT_LIMIT,
++					 TPS55289_IOUT_LIMIT_EN, 0);
++		return ret ? ret : count;
++	}
++
++	ua = ma * 1000;
++	if (ua % data->current_step_ua)
++		return -EINVAL;
++	selector = ua / data->current_step_ua;
++	if (selector > FIELD_MAX(TPS55289_IOUT_LIMIT_MASK))
++		return -EINVAL;
++
++	ret = regmap_write(data->regmap, TPS55289_REG_IOUT_LIMIT,
++			   TPS55289_IOUT_LIMIT_EN |
++			   FIELD_PREP(TPS55289_IOUT_LIMIT_MASK, selector));
++
++	return ret ? ret : count;
++}
++static DEVICE_ATTR_RW(current_limit_ma);
++
++static ssize_t forced_pwm_show(struct device *dev,
++			       struct device_attribute *attr, char *buf)
++{
++	struct tps55289_data *data = dev_get_drvdata(dev);
++	unsigned int value;
++	int ret;
++
++	ret = regmap_read(data->regmap, TPS55289_REG_MODE, &value);
++	if (ret)
++		return ret;
++
++	return sysfs_emit(buf, "%u\n", !!(value & TPS55289_MODE_FPWM));
++}
++
++static ssize_t forced_pwm_store(struct device *dev,
++				struct device_attribute *attr,
++				const char *buf, size_t count)
++{
++	struct tps55289_data *data = dev_get_drvdata(dev);
++	bool enabled;
++	int ret;
++
++	ret = kstrtobool(buf, &enabled);
++	if (ret)
++		return ret;
++	ret = regmap_update_bits(data->regmap, TPS55289_REG_MODE,
++				 TPS55289_MODE_FPWM,
++				 enabled ? TPS55289_MODE_FPWM : 0);
++
++	return ret ? ret : count;
++}
++static DEVICE_ATTR_RW(forced_pwm);
++
++static struct attribute *tps55289_attrs[] = {
++	&dev_attr_output_voltage_mv.attr,
++	&dev_attr_output_enable.attr,
++	&dev_attr_current_limit_ma.attr,
++	&dev_attr_forced_pwm.attr,
++	NULL,
++};
++ATTRIBUTE_GROUPS(tps55289);
++
++static int tps55289_probe(struct i2c_client *client)
++{
++	struct regulator_config config = {};
++	struct device *dev = &client->dev;
++	struct tps55289_data *data;
++	struct regulator_dev *rdev;
++	u32 rsense_uohm = TPS55289_DEFAULT_RSENSE_UOHM;
++	int ret;
++
++	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	data->regmap = devm_regmap_init_i2c(client, &tps55289_regmap_config);
++	if (IS_ERR(data->regmap))
++		return dev_err_probe(dev, PTR_ERR(data->regmap),
++				     "failed to initialize regmap\n");
++
++	device_property_read_u32(dev, "ti,current-sense-micro-ohms",
++				 &rsense_uohm);
++	if (!rsense_uohm)
++		return dev_err_probe(dev, -EINVAL,
++				     "current sense resistor must be non-zero\n");
++	data->current_step_ua = DIV_ROUND_CLOSEST(500000000U, rsense_uohm);
++
++	/* Use internal feedback and the 0.0564 ratio (10 mV output steps). */
++	ret = regmap_update_bits(data->regmap, TPS55289_REG_VOUT_FS,
++				 TPS55289_VOUT_FS_FB |
++				 TPS55289_VOUT_FS_INTFB_MASK,
++				 TPS55289_VOUT_FS_INTFB_20V);
++	if (ret)
++		return dev_err_probe(dev, ret,
++				     "failed to configure internal feedback\n");
++
++	config.dev = dev;
++	config.of_node = dev->of_node;
++	config.regmap = data->regmap;
++	config.driver_data = data;
++	config.init_data = of_get_regulator_init_data(dev, dev->of_node,
++						      &tps55289_desc);
++
++	rdev = devm_regulator_register(dev, &tps55289_desc, &config);
++	if (IS_ERR(rdev))
++		return dev_err_probe(dev, PTR_ERR(rdev),
++				     "failed to register regulator\n");
++
++	i2c_set_clientdata(client, data);
++	ret = devm_device_add_group(dev, &tps55289_group);
++	if (ret)
++		return ret;
++
++	dev_info(dev, "0.8-20 V regulator, current-limit step %u uA\n",
++		 data->current_step_ua);
++
++	return 0;
++}
++
++static const struct of_device_id tps55289_of_match[] = {
++	{ .compatible = "ti,tps55289" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, tps55289_of_match);
++
++static const struct i2c_device_id tps55289_i2c_id[] = {
++	{ "tps55289" },
++	{ }
++};
++MODULE_DEVICE_TABLE(i2c, tps55289_i2c_id);
++
++static struct i2c_driver tps55289_driver = {
++	.driver = {
++		.name = "tps55289",
++		.of_match_table = tps55289_of_match,
++	},
++	.probe = tps55289_probe,
++	.id_table = tps55289_i2c_id,
++};
++module_i2c_driver(tps55289_driver);
++
++MODULE_AUTHOR("PB2 Multitool <pb2-multitool@local>");
++MODULE_DESCRIPTION("Texas Instruments TPS55289 regulator driver");
++MODULE_LICENSE("GPL");
+--- /dev/null
++++ b/Documentation/devicetree/bindings/regulator/ti,tps55289.yaml
+@@ -0,0 +1,58 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/regulator/ti,tps55289.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: Texas Instruments TPS55289 buck-boost converter
++
++maintainers:
++  - PB2 Multitool <pb2-multitool@local>
++
++description: |
++  The TPS55289 is an I2C-controlled synchronous buck-boost converter.
++  The driver uses the internal feedback divider and exposes voltage,
++  output enable, current limit, slew rate, discharge, and PFM/FPWM mode
++  through the regulator framework.
++
++allOf:
++  - $ref: regulator.yaml#
++
++properties:
++  compatible:
++    const: ti,tps55289
++
++  reg:
++    maxItems: 1
++
++  ti,current-sense-micro-ohms:
++    description:
++      Resistance in micro-ohms between the ISP and ISN pins. It is used to
++      convert the programmable 0.5 mV current-limit steps into microamps.
++    minimum: 1
++    default: 100000
++
++required:
++  - compatible
++  - reg
++
++unevaluatedProperties: false
++
++examples:
++  - |
++    i2c {
++        #address-cells = <1>;
++        #size-cells = <0>;
++
++        regulator@75 {
++            compatible = "ti,tps55289";
++            reg = <0x75>;
++            regulator-name = "vout";
++            regulator-min-microvolt = <800000>;
++            regulator-max-microvolt = <20000000>;
++            regulator-min-microamp = <5000>;
++            regulator-max-microamp = <635000>;
++            ti,current-sense-micro-ohms = <100000>;
++        };
++    };
++...

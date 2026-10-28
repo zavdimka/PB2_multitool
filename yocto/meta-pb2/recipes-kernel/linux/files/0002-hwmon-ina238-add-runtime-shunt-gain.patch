@@ -1,0 +1,159 @@
+From 2f8a3d5c4090bdb87a7c4fe59d6b138f9f89eb02 Mon Sep 17 00:00:00 2001
+From: PB2 Multitool <pb2-multitool@local>
+Date: Thu, 8 Oct 2026 15:20:00 +0000
+Subject: [PATCH] hwmon: ina238: add runtime shunt gain control
+
+Expose the INA238 ADCRANGE selection as a writable shunt_gain hwmon
+attribute. A gain value of 1 selects the high-accuracy +/-40.96 mV
+range and 4 selects the wide +/-163.84 mV range. Keep SQ52206's
+intermediate gain value working as well.
+
+Signed-off-by: PB2 Multitool <pb2-multitool@local>
+---
+--- a/drivers/hwmon/ina238.c
++++ b/drivers/hwmon/ina238.c
+@@ -131,6 +131,7 @@
+ 
+ struct ina238_data {
+ 	const struct ina238_config *config;
++	enum ina238_ids chip;
+ 	struct i2c_client *client;
+ 	struct mutex config_lock;
+ 	struct regmap *regmap;
+@@ -181,6 +182,44 @@
+ 	},
+ };
+ 
++static int ina238_set_shunt_gain(struct ina238_data *data, int gain)
++{
++	unsigned int mask;
++	unsigned int value;
++	int ret;
++
++	if (data->chip == sq52206) {
++		mask = SQ52206_CONFIG_ADCRANGE_HIGH |
++		       SQ52206_CONFIG_ADCRANGE_LOW;
++		switch (gain) {
++		case 1:
++			value = SQ52206_CONFIG_ADCRANGE_HIGH;
++			break;
++		case 2:
++			value = SQ52206_CONFIG_ADCRANGE_LOW;
++			break;
++		case 4:
++			value = 0;
++			break;
++		default:
++			return -EINVAL;
++		}
++	} else {
++		if (gain != 1 && gain != 4)
++			return -EINVAL;
++		mask = INA238_CONFIG_ADCRANGE;
++		value = gain == 1 ? INA238_CONFIG_ADCRANGE : 0;
++	}
++
++	mutex_lock(&data->config_lock);
++	ret = regmap_update_bits(data->regmap, INA238_CONFIG, mask, value);
++	if (!ret)
++		WRITE_ONCE(data->gain, gain);
++	mutex_unlock(&data->config_lock);
++
++	return ret;
++}
++
+ static int ina238_read_reg24(const struct i2c_client *client, u8 reg, u32 *val)
+ {
+ 	u8 data[3];
+@@ -737,11 +776,60 @@
+ /* energy attributes are 5 bytes wide so we need u64 */
+ static DEVICE_ATTR_RO(energy1_input);
+ 
++static ssize_t shunt_gain_show(struct device *dev,
++			       struct device_attribute *attr, char *buf)
++{
++	struct ina238_data *data = dev_get_drvdata(dev);
++
++	return sysfs_emit(buf, "%d\n", READ_ONCE(data->gain));
++}
++
++static ssize_t shunt_gain_store(struct device *dev,
++				struct device_attribute *attr,
++				const char *buf, size_t count)
++{
++	struct ina238_data *data = dev_get_drvdata(dev);
++	int gain;
++	int ret;
++
++	ret = kstrtoint(buf, 0, &gain);
++	if (ret)
++		return ret;
++
++	ret = ina238_set_shunt_gain(data, gain);
++	if (ret)
++		return ret;
++
++	return count;
++}
++static DEVICE_ATTR_RW(shunt_gain);
++
+ static struct attribute *ina238_attrs[] = {
+ 	&dev_attr_energy1_input.attr,
++	&dev_attr_shunt_gain.attr,
++	NULL,
++};
++
++static umode_t ina238_extra_is_visible(struct kobject *kobj,
++				       struct attribute *attr, int index)
++{
++	struct ina238_data *data = dev_get_drvdata(kobj_to_dev(kobj));
++
++	if (attr == &dev_attr_energy1_input.attr && !data->config->has_energy)
++		return 0;
++
++	return attr->mode;
++}
++
++static const struct attribute_group ina238_group = {
++	.attrs = ina238_attrs,
++	.is_visible = ina238_extra_is_visible,
++};
++
++static const struct attribute_group *ina238_groups[] = {
++	&ina238_group,
+ 	NULL,
+ };
+-ATTRIBUTE_GROUPS(ina238);
+ 
+ static int ina238_probe(struct i2c_client *client)
+ {
+@@ -761,6 +849,7 @@
+ 
+ 	data->client = client;
+ 	/* set the device type */
++	data->chip = chip;
+ 	data->config = &ina238_config[chip];
+ 
+ 	mutex_init(&data->config_lock);
+@@ -783,7 +872,9 @@
+ 	/* load shunt gain value */
+ 	if (device_property_read_u32(dev, "ti,shunt-gain", &data->gain) < 0)
+ 		data->gain = 4; /* Default of ADCRANGE = 0 */
+-	if (data->gain != 1 && data->gain != 2 && data->gain != 4) {
++	if ((chip == sq52206 && data->gain != 1 && data->gain != 2 &&
++	     data->gain != 4) ||
++	    (chip != sq52206 && data->gain != 1 && data->gain != 4)) {
+ 		dev_err(dev, "invalid shunt gain value %u\n", data->gain);
+ 		return -EINVAL;
+ 	}
+@@ -829,9 +920,7 @@
+ 	}
+ 
+ 	hwmon_dev = devm_hwmon_device_register_with_info(dev, client->name, data,
+-							 &ina238_chip_info,
+-							 data->config->has_energy ?
+-								ina238_groups : NULL);
++							 &ina238_chip_info, ina238_groups);
+ 	if (IS_ERR(hwmon_dev))
+ 		return PTR_ERR(hwmon_dev);
+ 

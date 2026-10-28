@@ -1,0 +1,4 @@
+# PocketBeagle 2 microSD image. meta-ti supplies the K3 ROM and EFI payloads.
+bootloader --timeout=0 --append="rootfstype=ext4 ${TI_WKS_BOOTLOADER_APPEND}"
+part --source bootimg-efi --sourceparams="loader=${EFI_PROVIDER}" --fstype=vfat --label boot --active --align 1024 --use-uuid --fixed-size 128M
+part / --source rootfs --fstype=ext4 --label root --align 1024 --use-uuid

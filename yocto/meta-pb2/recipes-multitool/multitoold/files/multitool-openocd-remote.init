@@ -1,0 +1,20 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        mkdir -p /run/multitool
+        start-stop-daemon -S -b -m -p /run/multitool/openocd-remote.pid \
+            -x /usr/sbin/multitool-openocd-remote
+        ;;
+    stop)
+        start-stop-daemon -K -p /run/multitool/openocd-remote.pid
+        ;;
+    restart)
+        "$0" stop
+        "$0" start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}" >&2
+        exit 1
+        ;;
+esac

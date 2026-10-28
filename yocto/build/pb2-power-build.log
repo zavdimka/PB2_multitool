@@ -1,0 +1,91 @@
+NOTE: Reconnecting to bitbake server...
+NOTE: Retrying server connection (#1)... (17:31:25.266264)
+Loading cache...done.
+Loaded 6708 entries from dependency cache.
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+NOTE: Resolving any missing task queue dependencies
+
+Build Configuration (mc:default):
+BB_VERSION           = "2.8.1"
+BUILD_SYS            = "x86_64-linux"
+NATIVELSBSTRING      = "universal"
+TARGET_SYS           = "aarch64-poky-linux"
+MACHINE              = "pocketbeagle2"
+DISTRO               = "pb2-fast"
+DISTRO_VERSION       = "1.0"
+TUNE_FEATURES        = "aarch64"
+TARGET_FPU           = ""
+meta                 
+meta-poky            = "scarthgap:4fb7016a07507683359ebd620f1951fd5ea44bfa"
+meta-oe              = "scarthgap:0f00f8b9a21950640da8c5707343e5540133f86e"
+meta-arm-toolchain   
+meta-arm             = "scarthgap:0a4b911d9fd63ab29c4532a907fae3282dbdcfe4"
+meta-ti-bsp          
+meta-beagle          = "scarthgap:a28461e373c3b7c05d7eddb5067a114babcf5537"
+meta-pb2             = "main:bfcd3a437397d3430000722b5195b0a9a787d330"
+
+
+Build Configuration:
+BB_VERSION           = "2.8.1"
+BUILD_SYS            = "x86_64-linux"
+NATIVELSBSTRING      = "universal"
+TARGET_SYS           = "arm-poky-eabi"
+MACHINE              = "pocketbeagle2-k3r5"
+DISTRO               = "pb2-fast"
+DISTRO_VERSION       = "1.0"
+TUNE_FEATURES        = "arm armv7a vfp thumb callconvention-hard"
+TARGET_FPU           = "hard"
+meta                 
+meta-poky            = "scarthgap:4fb7016a07507683359ebd620f1951fd5ea44bfa"
+meta-oe              = "scarthgap:0f00f8b9a21950640da8c5707343e5540133f86e"
+meta-arm-toolchain   
+meta-arm             = "scarthgap:0a4b911d9fd63ab29c4532a907fae3282dbdcfe4"
+meta-ti-bsp          
+meta-beagle          = "scarthgap:a28461e373c3b7c05d7eddb5067a114babcf5537"
+meta-pb2             = "main:bfcd3a437397d3430000722b5195b0a9a787d330"
+
+Initialising tasks...Sstate summary: Wanted 132 Local 121 Mirrors 0 Missed 11 Current 1314 (91% match, 99% complete)
+done.
+NOTE: Executing Tasks
+NOTE: Running task 1100 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_unpack)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_unpack: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_unpack: Succeeded
+NOTE: Running task 3725 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_symlink_kernsrc)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_symlink_kernsrc: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_symlink_kernsrc: Succeeded
+NOTE: Running task 3726 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_patch)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_patch: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_patch: Succeeded
+NOTE: Running task 3727 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_deploy_source_date_epoch)
+NOTE: Running task 3728 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_populate_lic)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_deploy_source_date_epoch: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_populate_lic: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_populate_lic: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_deploy_source_date_epoch: Succeeded
+NOTE: Running task 3729 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_configure)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_configure: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_configure: Succeeded
+NOTE: Running task 3730 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_compile)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_compile: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_compile: Succeeded
+NOTE: Running task 3731 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_shared_workdir)
+NOTE: Running task 3732 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_kernel_link_images)
+NOTE: Running task 3733 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_kernel_generate_rsa_keys)
+NOTE: Running task 3734 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_transform_kernel)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_kernel_link_images: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_shared_workdir: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_kernel_generate_rsa_keys: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_transform_kernel: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_kernel_link_images: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_transform_kernel: Succeeded
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_kernel_generate_rsa_keys: Succeeded
+NOTE: Running task 3735 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_assemble_fitimage)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_shared_workdir: Succeeded
+NOTE: Running task 3736 of 3758 (/home/dimka/PB2_multitool/yocto/build/../sources/meta-ti/meta-beagle/recipes-kernel/linux/linux-bb.org_6.12.bb:do_compile_kernelmodules)
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_assemble_fitimage: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_compile_kernelmodules: Started
+NOTE: recipe linux-bb.org-6.12.57+git-r0: task do_assemble_fitimage: Succeeded

@@ -1,0 +1,92 @@
+#!/bin/sh
+
+GADGET=/sys/kernel/config/usb_gadget/pb2-multitool
+RUNTIME=/run/multitool
+
+wait_for_path() {
+    path="$1"
+    count=0
+    while [ ! -e "$path" ] && [ "$count" -lt 50 ]; do
+        sleep 0.1
+        count=$((count + 1))
+    done
+    [ -e "$path" ]
+}
+
+start_gadget() {
+    mkdir -p "$RUNTIME" /sys/kernel/config
+    grep -q ' /sys/kernel/config configfs ' /proc/mounts || \
+        mount -t configfs none /sys/kernel/config
+
+    mkdir -p "$GADGET"
+    echo 0x1d6b > "$GADGET/idVendor"
+    echo 0x0104 > "$GADGET/idProduct"
+    echo 0x0200 > "$GADGET/bcdUSB"
+    echo 0x0100 > "$GADGET/bcdDevice"
+
+    mkdir -p "$GADGET/strings/0x409"
+    echo PB2MT001 > "$GADGET/strings/0x409/serialnumber"
+    echo "PB2 Multitool" > "$GADGET/strings/0x409/manufacturer"
+    echo "PB2 Multitool USB Network" > "$GADGET/strings/0x409/product"
+
+    mkdir -p "$GADGET/configs/c.1/strings/0x409"
+    echo "RNDIS network" > "$GADGET/configs/c.1/strings/0x409/configuration"
+    echo 250 > "$GADGET/configs/c.1/MaxPower"
+
+    mkdir -p "$GADGET/functions/rndis.usb0"
+    echo 02:50:42:32:00:02 > "$GADGET/functions/rndis.usb0/dev_addr"
+    echo 02:50:42:32:00:01 > "$GADGET/functions/rndis.usb0/host_addr"
+    if [ -d "$GADGET/functions/rndis.usb0/os_desc/interface.rndis" ]; then
+        echo RNDIS > "$GADGET/functions/rndis.usb0/os_desc/interface.rndis/compatible_id"
+        echo 5162001 > "$GADGET/functions/rndis.usb0/os_desc/interface.rndis/sub_compatible_id"
+    fi
+    [ -L "$GADGET/configs/c.1/rndis.usb0" ] || \
+        ln -s "$GADGET/functions/rndis.usb0" "$GADGET/configs/c.1/rndis.usb0"
+
+    echo 1 > "$GADGET/os_desc/use"
+    echo 0xcd > "$GADGET/os_desc/b_vendor_code"
+    echo MSFT100 > "$GADGET/os_desc/qw_sign"
+    [ -L "$GADGET/os_desc/c.1" ] || \
+        ln -s "$GADGET/configs/c.1" "$GADGET/os_desc/c.1"
+
+    udc=""
+    count=0
+    while [ -z "$udc" ] && [ "$count" -lt 50 ]; do
+        udc=$(ls /sys/class/udc 2>/dev/null | head -n 1)
+        [ -n "$udc" ] || sleep 0.1
+        count=$((count + 1))
+    done
+    [ -n "$udc" ] || return 1
+    echo "$udc" > "$GADGET/UDC"
+
+    wait_for_path /sys/class/net/usb0 || return 1
+    ifconfig usb0 192.168.7.2 netmask 255.255.255.252 up
+    : > "$RUNTIME/udhcpd.leases"
+    start-stop-daemon -S -b -m -p "$RUNTIME/udhcpd.pid" \
+        -x /usr/sbin/udhcpd -- -f -S /etc/multitool/udhcpd-usb.conf
+}
+
+stop_gadget() {
+    start-stop-daemon -K -p "$RUNTIME/udhcpd.pid" 2>/dev/null || true
+    ifconfig usb0 down 2>/dev/null || true
+    if [ -e "$GADGET/UDC" ]; then
+        echo "" > "$GADGET/UDC"
+    fi
+}
+
+case "$1" in
+    start)
+        start_gadget
+        ;;
+    stop)
+        stop_gadget
+        ;;
+    restart)
+        stop_gadget
+        start_gadget
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}" >&2
+        exit 1
+        ;;
+esac
